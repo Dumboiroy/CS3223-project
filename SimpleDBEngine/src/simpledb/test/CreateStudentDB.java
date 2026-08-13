@@ -17,6 +17,8 @@ public class CreateStudentDB {
 
       try {
          String cmd = "create table STUDENT(SId int, SName varchar(10), MajorId int, GradYear int)";
+         // ALL "success" should be num_rows_affected......
+         // damn lazy refactor all.
          int success = planner.executeUpdate(cmd, tx);
          if (success == 1) {
         	 System.out.println("Table STUDENT created.");

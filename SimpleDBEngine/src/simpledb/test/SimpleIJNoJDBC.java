@@ -14,6 +14,7 @@ import simpledb.server.SimpleDB;
 import simpledb.tx.Transaction;
 import simpledb.query.*;
 import simpledb.record.*;
+import simpledb.parse.*;
 
 public class SimpleIJNoJDBC {
    public static void main(String[] args) {
@@ -32,12 +33,18 @@ public class SimpleIJNoJDBC {
          System.out.print("\nSQL> ");
          while (sc.hasNextLine()) {
             // process one line of input
-            String cmd = sc.nextLine().trim();
-            if (cmd.startsWith("exit"))
-               break;
-            else if (cmd.startsWith("select")) {
+            String userInput = sc.nextLine().trim();
+            
+            // user EXIT
+            if (userInput.startsWith("exit"))
+                break;
+            // don't you want to use the parser...?
+            // Since the parser doesn't route for us, we should have app logic here.
+
+            // user QUERY
+            else if (userInput.startsWith("select")) {
 //            	planner, transaction, query
-            	String qry = cmd;
+            	String qry = userInput;
             	try {
             		Plan p = planner.createQueryPlan(qry, tx);
             		doQuery(p);
@@ -46,9 +53,19 @@ public class SimpleIJNoJDBC {
             		System.out.println("Runtime Exception: " + e);
             	}
             }
+            
+            // user UPDATE (assumes no invalid input)
             else {
             	// TODO: execute update
 //               doUpdate(stmt, cmd);
+            	String cmd = userInput;
+            	try {
+            		doUpdate(planner, tx, cmd);
+            		
+            	} 
+            	catch (RuntimeException e) {
+            		System.out.println("Runtime Exception: " + e);
+            	}
                
             }
             System.out.print("\nSQL> ");
@@ -115,13 +132,14 @@ public class SimpleIJNoJDBC {
       }
    }
 
-   private static void doUpdate(Statement stmt, String cmd) {
+   private static void doUpdate(Planner planner, Transaction tx, String cmd) {
       try {
-         int howmany = stmt.executeUpdate(cmd);
+    	 int numRowsAffected = planner.executeUpdate(cmd, tx);
+         int howmany = numRowsAffected;
          System.out.println(howmany + " records processed");
       }
-      catch (SQLException e) {
-         System.out.println("Exception: " + e.getMessage());
+      catch (RuntimeException e) {
+         System.out.println("Exception: " + e);
          e.printStackTrace();
       }
    }
