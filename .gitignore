@@ -1,3 +1,5 @@
 /.metadata/
-*/studentdb/
+# Databases
+SimpleDBClients/studentdb/
+SimpleDBEngine/studentdb/
 
