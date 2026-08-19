@@ -128,7 +128,6 @@ public class SimpleIJNoJDBC {
       }
       catch (Exception e) {
          System.out.println("Exception: " + e.getMessage());
-         e.printStackTrace();
       }
    }
 
@@ -136,11 +135,11 @@ public class SimpleIJNoJDBC {
       try {
     	 int numRowsAffected = planner.executeUpdate(cmd, tx);
          int howmany = numRowsAffected;
+         tx.commit();
          System.out.println(howmany + " records processed");
       }
       catch (RuntimeException e) {
-         System.out.println("Exception: " + e);
-         e.printStackTrace();
+         System.out.println("RuntimeException: " + e);
       }
    }
    
