@@ -6,5 +6,5 @@ SimpleDBClients/studentdb/
 SimpleDBEngine/studentdb/
 
 # MacOS metadata
-.DS_Store
+**/.DS_Store
 
