@@ -1,5 +1,10 @@
+# not sure when this was added
 /.metadata/
+
 # Databases
 SimpleDBClients/studentdb/
 SimpleDBEngine/studentdb/
+
+# MacOS metadata
+.DS_Store
 
