@@ -8,3 +8,10 @@ SimpleDBEngine/studentdb/
 # MacOS metadata
 **/.DS_Store
 
+# Eclipse Settings
+
+## Preferences
+**/.settings
+
+## classpath
+**/.classpath
