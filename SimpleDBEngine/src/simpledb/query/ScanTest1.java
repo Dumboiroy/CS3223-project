@@ -19,25 +19,25 @@ public class ScanTest1 {
       s1.beforeFirst();
       int n = 200;
       System.out.println("Inserting " + n + " random records.");
-      for (int i=0; i<n; i++) {
+      for (int i = 0; i < n; i++) {
          s1.insert();
          int k = (int) Math.round(Math.random() * 50);
          s1.setInt("A", k);
-         s1.setString("B", "rec"+k);
+         s1.setString("B", "rec" + k);
       }
       s1.close();
 
       Scan s2 = new TableScan(tx, "T", layout);
       // selecting all records where A=10
       Constant c = new Constant(10);
-      Term t = new Term(new Expression("A"), new Expression(c)); 
+      Term t = new Term(new Expression("A"), "=", new Expression(c));
       Predicate pred = new Predicate(t);
       System.out.println("The predicate is " + pred);
       Scan s3 = new SelectScan(s2, pred);
       List<String> fields = Arrays.asList("B");
       Scan s4 = new ProjectScan(s3, fields);
       while (s4.next())
-         System.out.println(s4.getString("B")); 
+         System.out.println(s4.getString("B"));
       s4.close();
       tx.commit();
    }
