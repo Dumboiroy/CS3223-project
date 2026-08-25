@@ -17,7 +17,7 @@ import simpledb.index.btree.BTreeIndex; //in case we change to btree indexing
  * @author Edward Sciore
  */
 public class IndexInfo {
-   private String idxname, fldname;
+   private String idxname, fldname, idxtype;
    private Transaction tx;
    private Schema tblSchema;
    private Layout idxLayout;
@@ -32,13 +32,14 @@ public class IndexInfo {
     * @param si the statistics for the table
     */
    public IndexInfo(String idxname, String fldname, Schema tblSchema,
-                    Transaction tx,  StatInfo si) {
+                    Transaction tx, StatInfo si, String idxtype) {
       this.idxname = idxname;
       this.fldname = fldname;
       this.tx = tx;
       this.tblSchema = tblSchema;
       this.idxLayout = createIdxLayout();
       this.si = si;
+      this.idxtype = idxtype;
    }
    
    /**
@@ -46,8 +47,10 @@ public class IndexInfo {
     * @return the Index object associated with this information
     */
    public Index open() {
-      return new HashIndex(tx, idxname, idxLayout);
-//    return new BTreeIndex(tx, idxname, idxLayout);
+      if (idxtype.equals("btree"))
+         return new BTreeIndex(tx, idxname, idxLayout);
+      else
+         return new HashIndex(tx, idxname, idxLayout);
    }
    
    /**
@@ -64,8 +67,10 @@ public class IndexInfo {
    public int blocksAccessed() {
       int rpb = tx.blockSize() / idxLayout.slotSize();
       int numblocks = si.recordsOutput() / rpb;
-      return HashIndex.searchCost(numblocks, rpb);
-//    return BTreeIndex.searchCost(numblocks, rpb);
+      if (idxtype.equals("btree"))
+         return BTreeIndex.searchCost(numblocks, rpb);
+      else
+         return HashIndex.searchCost(numblocks, rpb);
    }
    
    /**
