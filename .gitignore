@@ -4,6 +4,8 @@
 # Databases
 SimpleDBClients/studentdb/
 SimpleDBEngine/studentdb/
+SimpleDBEngine/scantest1/
+SimpleDBEngine/scantest2/
 
 # MacOS metadata
 **/.DS_Store
