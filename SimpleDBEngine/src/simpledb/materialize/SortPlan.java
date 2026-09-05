@@ -30,6 +30,33 @@ public class SortPlan implements Plan {
    }
    
    /**
+    * Creates a sort plan using the specified fields and sorting directions.
+    *
+    * Each Boolean value corresponds to the field at the same index:
+    * true  = ascending
+    * false = descending
+    *
+    * @param p the plan for the underlying query
+    * @param sortfields the fields to sort by
+    * @param tx the calling transaction
+    * @param sortAscending the direction for each sort field
+    */
+   public SortPlan(Transaction tx,
+                   Plan p,
+                   List<String> sortfields,
+                   List<Boolean> sortAscending) {
+	   
+      if (sortfields.size() != sortAscending.size())
+         throw new IllegalArgumentException(
+               "Each sort field must have a sorting direction");
+
+      this.tx = tx;
+      this.p = p;
+      this.sch = p.schema();
+      this.comp = new RecordComparator(sortfields, sortAscending);
+   }
+   
+   /**
     * This method is where most of the action is.
     * Up to 2 sorted temporary tables are created,
     * and are passed into SortScan for final merging.
@@ -39,8 +66,15 @@ public class SortPlan implements Plan {
       Scan src = p.open();
       List<TempTable> runs = splitIntoRuns(src);
       src.close();
+      
+      // this ensures there is no error when it is a empty output
+      if (runs.isEmpty())
+          runs.add(new TempTable(tx, sch));
+      
+      
       while (runs.size() > 2)
          runs = doAMergeIteration(runs);
+      
       return new SortScan(runs, comp);
    }
    
