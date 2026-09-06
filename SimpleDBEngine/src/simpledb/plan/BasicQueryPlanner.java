@@ -1,9 +1,11 @@
 package simpledb.plan;
 
 import java.util.*;
+
 import simpledb.tx.Transaction;
 import simpledb.metadata.*;
 import simpledb.parse.*;
+import simpledb.materialize.*;
 
 /**
  * The simplest, most naive query planner possible.
@@ -45,6 +47,17 @@ public class BasicQueryPlanner implements QueryPlanner {
       
       //Step 4: Project on the field names
       p = new ProjectPlan(p, data.fields());
+      
+      //Step 5: Add sorting only when ORDER BY is present
+      //Ensure SortPlan node is the top-most node in the query tree
+      if (!data.sortFields().isEmpty()) {
+          p = new SortPlan(
+                tx,
+                p,
+                data.sortFields(),
+                data.sortAscending());
+       }
+      
       return p;
    }
 }

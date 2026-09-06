@@ -10,6 +10,7 @@ import simpledb.query.*;
  */
 public class RecordComparator implements Comparator<Scan> {
    private List<String> fields;
+   private List<Boolean> sortAscending;
    
    /**
     * Create a comparator using the specified fields,
@@ -19,6 +20,28 @@ public class RecordComparator implements Comparator<Scan> {
    public RecordComparator(List<String> fields) {
       this.fields = fields;
    }
+   
+   /**
+    * Creates a comparator using the specified fields and directions.
+    *
+    * Each Boolean value corresponds to the field at the same index:
+    * true  = ascending
+    * false = descending
+    *
+    * @param fields the fields to sort by
+    * @param sortAscending the direction for each sort field
+    */
+   public RecordComparator(List<String> fields,
+                           List<Boolean> sortAscending) {
+	   
+      if (fields.size() != sortAscending.size())
+         throw new IllegalArgumentException(
+               "Each sort field must have a sorting direction");
+
+      this.fields = new ArrayList<String>(fields);
+      this.sortAscending = new ArrayList<Boolean>(sortAscending);
+   }
+   
    
    /**
     * Compare the current records of the two specified scans.
@@ -31,15 +54,27 @@ public class RecordComparator implements Comparator<Scan> {
     * @param s1 the first scan
     * @param s2 the second scan
     * @return the result of comparing each scan's current record according to the field list
+    *         returns negative number if s1 comes first,
+    *         positive number if s2 comes first,
+    *         zero if all sort fields are equal
     */
    public int compare(Scan s1, Scan s2) {
-      for (String fldname : fields) {
-         Constant val1 = s1.getVal(fldname);
-         Constant val2 = s2.getVal(fldname);
-         int result = val1.compareTo(val2);
-         if (result != 0)
-            return result;
-      }
+	   for (int i = 0; i < fields.size(); i++) {
+	         String fldname = fields.get(i);
+
+	         Constant val1 = s1.getVal(fldname);
+	         Constant val2 = s2.getVal(fldname);
+
+	         int result;
+
+	         if (sortAscending.get(i))
+	            result = val1.compareTo(val2);
+	         else
+	            result = val2.compareTo(val1);
+
+	         if (result != 0)
+	            return result;
+	      }
       return 0;
    }
 }
