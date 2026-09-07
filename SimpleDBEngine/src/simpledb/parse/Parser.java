@@ -58,14 +58,33 @@ public class Parser {
    public QueryData query() {
       lex.eatKeyword("select");
       List<String> fields = selectList();
+      
       lex.eatKeyword("from");
       Collection<String> tables = tableList();
+      
       Predicate pred = new Predicate();
       if (lex.matchKeyword("where")) {
          lex.eatKeyword("where");
          pred = predicate();
       }
-      return new QueryData(fields, tables, pred);
+      
+      // ORDER BY CLAUSE
+      List<String> sortFields = new ArrayList<String>();
+      List<Boolean> sortAscending = new ArrayList<Boolean>();
+
+      if (lex.matchKeyword("order")) {
+         lex.eatKeyword("order");
+         lex.eatKeyword("by");
+         orderList(sortFields, sortAscending);
+      }
+      
+      
+      return new QueryData(
+    	         fields,
+    	         tables,
+    	         pred,
+    	         sortFields,
+    	         sortAscending);
    }
 
    private List<String> selectList() {
@@ -86,6 +105,38 @@ public class Parser {
          L.addAll(tableList());
       }
       return L;
+   }
+   
+   /**
+    * Parses the comma-separated list following ORDER BY
+    *
+    * Each item has the following form:
+    * field [ASC | DESC | null]
+    *
+    * ASC is used by default when no direction is specified.
+    */
+   private void orderList(List<String> sortFields,
+                          List<Boolean> sortAscending) {
+      while (true) {
+         String fldname = field();
+         boolean ascending = true;
+
+         if (lex.matchKeyword("asc")) {
+            lex.eatKeyword("asc");
+         }
+         else if (lex.matchKeyword("desc")) {
+            lex.eatKeyword("desc");
+            ascending = false;
+         }
+
+         sortFields.add(fldname);
+         sortAscending.add(ascending);
+
+         if (!lex.matchDelim(',')) // exit while loop
+            break;
+
+         lex.eatDelim(',');
+      }
    }
 
    // Methods for parsing the various update commands
