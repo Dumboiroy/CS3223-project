@@ -19,6 +19,7 @@ public class RecordComparator implements Comparator<Scan> {
     */
    public RecordComparator(List<String> fields) {
       this.fields = fields;
+      // default ascending
       this.sortAscending = new ArrayList<Boolean>(Collections.nCopies(fields.size(), true));
    }
    
