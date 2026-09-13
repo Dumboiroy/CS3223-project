@@ -6,6 +6,7 @@ import simpledb.record.*;
 import simpledb.query.*;
 import simpledb.metadata.*;
 import simpledb.index.planner.*;
+import simpledb.materialize.MergeJoinPlan;
 import simpledb.multibuffer.MultibufferProductPlan;
 import simpledb.plan.*;
 
@@ -19,6 +20,7 @@ class TablePlanner {
    private Schema myschema;
    private Map<String,IndexInfo> indexes;
    private Transaction tx;
+   private String tblname;
    
    /**
     * Creates a new table planner.
@@ -33,6 +35,7 @@ class TablePlanner {
    public TablePlanner(String tblname, Predicate mypred, Transaction tx, MetadataMgr mdm) {
       this.mypred  = mypred;
       this.tx  = tx;
+      this.tblname = tblname;
       myplan   = new TablePlan(tx, tblname, mdm);
       myschema = myplan.schema();
       indexes  = mdm.getIndexInfo(tblname, tx);
@@ -52,9 +55,12 @@ class TablePlanner {
    
    /**
     * Constructs a join plan of the specified plan
-    * and the table.  The plan will use an indexjoin, if possible.
-    * (Which means that if an indexselect is also possible,
-    * the indexjoin operator takes precedence.)
+    * and the table, choosing among indexjoin, mergejoin
+    * and nestedloopjoin whichever is cheapest (fewest block
+    * accesses) among those applicable to the join predicate.
+    * A nestedloopjoin is always applicable (it supports any
+    * predicate, including non-equality ones), so it is used
+    * as the fallback when no index or merge join applies.
     * The method returns null if no join is possible.
     * @param current the specified plan
     * @return a join plan of the plan and this table
@@ -64,10 +70,25 @@ class TablePlanner {
       Predicate joinpred = mypred.joinSubPred(myschema, currsch);
       if (joinpred == null)
          return null;
-      Plan p = makeIndexJoin(current, currsch);
-      if (p == null)
-         p = makeProductJoin(current, currsch);
-      return p;
+
+      Plan best = makeNestedLoopJoin(current, currsch);
+
+      Plan mergeJoin = makeMergeJoin(current, currsch);
+      if (mergeJoin != null && mergeJoin.blocksAccessed() < best.blocksAccessed())
+         best = mergeJoin;
+
+      Plan indexJoin = makeIndexJoin(current, currsch);
+      if (indexJoin != null && indexJoin.blocksAccessed() < best.blocksAccessed())
+         best = indexJoin;
+
+      if (best == indexJoin)
+         System.out.println("index join used on " + tblname);
+      else if (best == mergeJoin)
+         System.out.println("merge join used on " + tblname);
+      else
+         System.out.println("nested loop join used on " + tblname);
+
+      return best;
    }
    
    /**
@@ -106,9 +127,22 @@ class TablePlanner {
       return null;
    }
    
-   private Plan makeProductJoin(Plan current, Schema currsch) {
-      Plan p = makeProductPlan(current);
-      return addJoinPred(p, currsch);
+   private Plan makeMergeJoin(Plan current, Schema currsch) {
+      for (String fldname : myschema.fields()) {
+         String outerfield = mypred.equatesWithField(fldname);
+         if (outerfield != null && currsch.hasField(outerfield)) {
+            Plan p = new MergeJoinPlan(tx, current, myplan, outerfield, fldname);
+            p = addSelectPred(p);
+            return addJoinPred(p, currsch);
+         }
+      }
+      return null;
+   }
+
+   private Plan makeNestedLoopJoin(Plan current, Schema currsch) {
+      Predicate joinpred = mypred.joinSubPred(currsch, myschema);
+      Plan p = addSelectPred(myplan);
+      return new NestedLoopJoinPlan(current, p, joinpred);
    }
    
    private Plan addSelectPred(Plan p) {
