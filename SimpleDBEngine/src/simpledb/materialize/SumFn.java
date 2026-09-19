@@ -4,7 +4,7 @@ import simpledb.query.*;
 
 /**
  * The <i>sum</i> aggregation function.
- * @author Edward Sciore
+ * @author Dumboiroy
  */
 public class SumFn implements AggregationFn {
    private String fldname;

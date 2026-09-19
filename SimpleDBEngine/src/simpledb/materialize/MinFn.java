@@ -4,7 +4,7 @@ import simpledb.query.*;
 
 /**
  * The <i>min</i> aggregation function.
- * @author Edward Sciore
+ * @author Dumboiroy
  */
 public class MinFn implements AggregationFn {
    private String fldname;

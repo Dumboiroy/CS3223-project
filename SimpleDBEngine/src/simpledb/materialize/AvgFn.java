@@ -4,7 +4,7 @@ import simpledb.query.*;
 
 /**
  * The <i>avg</i> aggregation function.
- * @author Edward Sciore
+ * @author Dumboiroy
  */
 public class AvgFn implements AggregationFn {
    private String fldname;
