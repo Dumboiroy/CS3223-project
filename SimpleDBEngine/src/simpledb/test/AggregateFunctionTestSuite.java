@@ -59,9 +59,9 @@ public class AggregateFunctionTestSuite {
          String q4 = "select sum(majorid) from student group by gradyear";
          allPassed &= runAndCheck(planner, tx, q4, 4);
 
-         System.out.println("\n=== Test 5: AVG with GROUP BY ===");
+         System.out.println("\n=== Test 5: AVG with GROUP BY and ORDER BY ===");
          System.out.println("Expected: 4 rows | Avg values: 2019=20, 2020=23, 2021=16, 2022=15");
-         String q5 = "select avg(majorid) from student group by gradyear";
+         String q5 = "select avg(majorid) from student group by gradyear order by gradyear desc";
          allPassed &= runAndCheck(planner, tx, q5, 4);
 
          System.out.println("\n=== Test 6: COUNT without GROUP BY ===");
