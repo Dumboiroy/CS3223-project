@@ -13,6 +13,10 @@ public class QueryData {
    private Collection<String> tables;
    private Predicate pred;
    
+   // fields used for GROUP BY 
+   private List<String> groupFields;
+   private List<String> aggregateFunctions;
+   
    // fields used for ORDER BY clause
    private List<String> sortFields;
    private List<Boolean> sortAscending;
@@ -26,7 +30,9 @@ public class QueryData {
 		   			Collection<String> tables,
 		   			Predicate pred,
 		   			List<String> sortFields,
-                    List<Boolean> sortAscending) {
+                    List<Boolean> sortAscending,
+                    List<String> groupFields,
+                    List<String> aggregateFunctions) {
 	   
 	   if (sortFields.size() != sortAscending.size())
 	         throw new IllegalArgumentException(
@@ -37,8 +43,8 @@ public class QueryData {
 	      this.pred = pred;
 	      this.sortFields = sortFields; 
 	      this.sortAscending = sortAscending; // true = ascending, false = descending
-	      
-	   
+	      this.groupFields = groupFields;
+	      this.aggregateFunctions = aggregateFunctions;
    }
    
    /**
@@ -65,6 +71,25 @@ public class QueryData {
    public Predicate pred() {
       return pred;
    }
+   
+   /**
+    * Returns the fields mentioned in the GROUP BY clause.
+    * @return a list of grouping field names (empty if no GROUP BY clause)
+    */
+   public List<String> groupFields() {
+      return groupFields;
+   }
+
+   /**
+    * Returns the aggregate functions specified in the GROUP BY clause.
+    * @return a list of aggregate function strings like "count(id)", "sum(salary)"
+    *         (empty if no GROUP BY clause)
+    */
+   public List<String> aggregateFunctions() {
+      return aggregateFunctions;
+   }
+
+
    
    /**
     * Returns the fields mentioned in the ORDER BY clause.
@@ -101,6 +126,19 @@ public class QueryData {
       String predstring = pred.toString();
       if (!predstring.equals(""))
          result += " where " + predstring;
+      
+      if (!groupFields.isEmpty()) { // GROUP BY
+    	    result += " group by ";
+
+    	    for (int i = 0; i < groupFields.size(); i++) {
+    	        result += groupFields.get(i);
+    	        result += " ";
+    	        result += aggregateFunctions.get(i);
+
+    	        if (i < groupFields.size() - 1)
+    	            result += ", ";
+    	    }
+    	}
       
       if (!sortFields.isEmpty()) { // ORDER BY
           result += " order by ";
