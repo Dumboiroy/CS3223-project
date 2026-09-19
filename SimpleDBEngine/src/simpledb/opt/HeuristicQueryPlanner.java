@@ -46,15 +46,27 @@ public class HeuristicQueryPlanner implements QueryPlanner {
 				currentplan = getLowestProductPlan(currentplan);
 		}
 
-		// Step 4. Project on the field names and return
-		Plan p = new ProjectPlan(currentplan, data.fields());
+		// Step 4: Apply GROUP BY if present
+		List<String> projectionFields = data.fields();
+		if (!data.groupFields().isEmpty()) {
+			List<AggregationFn> aggFns = createAggregationFunctions(data.aggregateFunctions());
+			currentplan = new GroupByPlan(tx, currentplan, data.groupFields(), aggFns);
 
-		// Step 5: Add sorting only when ORDER BY is present
-		// Ensure SortPlan node is the top-most node in the query tree
+			// For GROUP BY: project on group fields + aggregate result field names
+			projectionFields = new ArrayList<>(data.groupFields());
+			for (AggregationFn fn : aggFns) {
+				projectionFields.add(fn.fieldName()); // e.g., "countofid" from CountFn
+			}
+		}
+
+		// Step 5: Project on the field names
+		Plan p = new ProjectPlan(currentplan, projectionFields);
+
+		// Step 6: Add sorting only when ORDER BY is present
 		if (!data.sortFields().isEmpty()) {
 			p = new SortPlan(tx, p, data.sortFields(), data.sortAscending());
 		}
-
+		
 		return p;
 	}
 
@@ -99,6 +111,37 @@ public class HeuristicQueryPlanner implements QueryPlanner {
 		}
 		tableplanners.remove(besttp);
 		return bestplan;
+	}
+
+	/**
+	 * Converts aggregate function string representations into AggregationFn
+	 * objects. Parses strings like "count(id)", "sum(salary)" and creates the
+	 * corresponding AggregationFn instances for execution during grouping.
+	 * 
+	 * @param aggFnStrings list of aggregate function strings (e.g., "count(id)",
+	 *                     "sum(salary)")
+	 * @return list of corresponding AggregationFn objects ready for execution
+	 */
+	private List<AggregationFn> createAggregationFunctions(List<String> aggFnStrings) {
+		List<AggregationFn> functions = new ArrayList<>();
+		for (String aggStr : aggFnStrings) {
+			// Parse strings like "count(id)", "sum(salary)", etc.
+			String type = aggStr.substring(0, aggStr.indexOf('('));
+			String field = aggStr.substring(aggStr.indexOf('(') + 1, aggStr.indexOf(')'));
+
+			if (type.equalsIgnoreCase("count")) {
+				functions.add(new CountFn(field));
+			} else if (type.equalsIgnoreCase("sum")) {
+				functions.add(new SumFn(field));
+			} else if (type.equalsIgnoreCase("max")) {
+				functions.add(new MaxFn(field));
+			} else if (type.equalsIgnoreCase("min")) {
+				functions.add(new MinFn(field));
+			} else if (type.equalsIgnoreCase("avg")) {
+				functions.add(new AvgFn(field));
+			}
+		}
+		return functions;
 	}
 
 	public void setPlanner(Planner p) {
