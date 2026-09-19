@@ -130,8 +130,7 @@ public class Parser {
          // Check if this is an aggregate function
          if (checkAggregateFn()) {
             // Parse aggregate function
-            String aggFnStr = parseAggregateFn();
-            aggregateFunctions.add(aggFnStr);
+            aggregateFunctions.add(parseAggregateFn());
          } else {
             // Parse regular field
             String fieldName = field();
@@ -223,7 +222,6 @@ public class Parser {
       lex.eatDelim('(');
       String fieldName = field();
       lex.eatDelim(')');
-      
       return fn + "(" + fieldName + ")";
    }
    
