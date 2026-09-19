@@ -48,14 +48,22 @@ public class HeuristicQueryPlanner implements QueryPlanner {
 
 		// Step 4: Apply GROUP BY if present
 		List<String> projectionFields = data.fields();
-		if (!data.groupFields().isEmpty()) {
+		if (!data.aggregateFunctions().isEmpty()) {
 			List<AggregationFn> aggFns = createAggregationFunctions(data.aggregateFunctions());
 			currentplan = new GroupByPlan(tx, currentplan, data.groupFields(), aggFns);
 
-			// For GROUP BY: project on group fields + aggregate result field names
-			projectionFields = new ArrayList<>(data.groupFields());
-			for (AggregationFn fn : aggFns) {
-				projectionFields.add(fn.fieldName()); // e.g., "countofid" from CountFn
+			if (!data.groupFields().isEmpty()) {
+			    // With GROUP BY: project on group fields + aggregate result field names
+			    projectionFields = new ArrayList<>(data.groupFields());
+			    for (AggregationFn fn : aggFns) {
+			        projectionFields.add(fn.fieldName());
+			    }
+			} else {
+			    // Without GROUP BY: project only on aggregate result field names
+			    projectionFields = new ArrayList<>();
+			    for (AggregationFn fn : aggFns) {
+			        projectionFields.add(fn.fieldName());
+			    }
 			}
 		}
 
