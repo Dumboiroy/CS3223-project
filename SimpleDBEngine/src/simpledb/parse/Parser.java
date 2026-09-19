@@ -56,9 +56,15 @@ public class Parser {
    // Methods for parsing queries
 
    public QueryData query() {
+	  // SELECT CLAUSE
       lex.eatKeyword("select");
-      List<String> fields = selectList();
       
+      // Extract aggregate functions for GROUP BY clause from SELECT clause
+      SelectClauseInfo selectInfo = selectListWithAggregates();
+      List<String> fields = selectInfo.fields;
+      List<String> aggregateFunctions = selectInfo.aggregateFunctions;
+      
+      // FROM CLAUSE
       lex.eatKeyword("from");
       Collection<String> tables = tableList();
       
@@ -66,6 +72,15 @@ public class Parser {
       if (lex.matchKeyword("where")) {
          lex.eatKeyword("where");
          pred = predicate();
+      }
+      
+      // GROUP BY CLAUSE (aggregateFunctions already initialized in SELECT clause)
+      List<String> groupFields = new ArrayList<String>();
+      
+      if (lex.matchKeyword("group")) {
+    	  lex.eatKeyword("group");
+    	  lex.eatKeyword("by");
+    	  groupByList(groupFields);
       }
       
       // ORDER BY CLAUSE
@@ -84,17 +99,53 @@ public class Parser {
     	         tables,
     	         pred,
     	         sortFields,
-    	         sortAscending);
+    	         sortAscending,
+    	         groupFields,
+    	         aggregateFunctions);
    }
-
-   private List<String> selectList() {
-      List<String> L = new ArrayList<String>();
-      L.add(field());
-      if (lex.matchDelim(',')) {
+   
+//   private List<String> selectList() {
+//      List<String> L = new ArrayList<String>();
+//      L.add(field());
+//      if (lex.matchDelim(',')) {
+//         lex.eatDelim(',');
+//         L.addAll(selectList());
+//      }
+//      return L;
+//   }
+   
+   /**
+    * Parses the SELECT clause and separates regular fields from aggregate functions.
+    * Syntax: field | AGGFN(field) [, field | AGGFN(field)]*
+    * Example: "dept, COUNT(id), SUM(salary)"
+    * 
+    * @param aggregateFunctions list to accumulate aggregate function strings found in SELECT
+    * @return list of regular (non-aggregate) field names
+    */
+   private SelectClauseInfo selectListWithAggregates() {
+      List<String> fields = new ArrayList<String>();
+      List<String> aggregateFunctions = new ArrayList<String>();
+      
+      while (true) {
+         // Check if this is an aggregate function
+         if (checkAggregateFn()) {
+            // Parse aggregate function
+            String aggFnStr = parseAggregateFn();
+            aggregateFunctions.add(aggFnStr);
+         } else {
+            // Parse regular field
+            String fieldName = field();
+            fields.add(fieldName);
+         }
+         
+         // Check for comma to continue
+         if (!lex.matchDelim(',')) {
+            break;
+         }
          lex.eatDelim(',');
-         L.addAll(selectList());
       }
-      return L;
+      
+      return new SelectClauseInfo(fields, aggregateFunctions);
    }
 
    private Collection<String> tableList() {
@@ -105,6 +156,75 @@ public class Parser {
          L.addAll(tableList());
       }
       return L;
+   }
+   
+   
+   
+   /**
+    * Parses the fields in a GROUP BY clause.
+    * Syntax: field [, field]*
+    * Example: "dept, role"
+    * 
+    * Note: Aggregate functions are NOT parsed here; they come from the SELECT list.
+    * 
+    * @param groupFields list to accumulate the grouping field names
+    */
+   private void groupByList(List<String> groupFields) {
+      while (true) {
+         // Only parse regular group fields
+         String fieldName = field();
+         groupFields.add(fieldName);
+         
+         if (!lex.matchDelim(',')) {
+            break;
+         }
+         lex.eatDelim(',');
+      }
+   }
+
+   /**
+    * Checks if the current keyword is an aggregate function.
+    * Used in selectListWithAggregates() to check if current field is aggregated.
+    * 
+    * @return the aggregate function string (e.g., "count(id)", "sum(salary)")
+    */
+   private boolean checkAggregateFn() {
+	   return (lex.matchKeyword("count") || lex.matchKeyword("sum") || 
+       lex.matchKeyword("max") || lex.matchKeyword("min") || 
+       lex.matchKeyword("avg"));
+   }
+   
+   /**
+    * Parses a single aggregate function invocation.
+    * Syntax: AGGREGATEFN(fieldname)
+    * Supported functions: COUNT, SUM, MAX, MIN, AVG
+    * 
+    * @return the aggregate function string (e.g., "count(id)", "sum(salary)")
+    */
+   private String parseAggregateFn() {
+      String fn = "";
+      if (lex.matchKeyword("count")) {
+         lex.eatKeyword("count");
+         fn = "count";
+      } else if (lex.matchKeyword("sum")) {
+         lex.eatKeyword("sum");
+         fn = "sum";
+      } else if (lex.matchKeyword("max")) {
+         lex.eatKeyword("max");
+         fn = "max";
+      } else if (lex.matchKeyword("min")) {
+         lex.eatKeyword("min");
+         fn = "min";
+      } else if (lex.matchKeyword("avg")) {
+         lex.eatKeyword("avg");
+         fn = "avg";
+      }
+      
+      lex.eatDelim('(');
+      String fieldName = field();
+      lex.eatDelim(')');
+      
+      return fn + "(" + fieldName + ")";
    }
    
    /**
