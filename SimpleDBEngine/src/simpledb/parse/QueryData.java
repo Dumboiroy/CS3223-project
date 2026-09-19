@@ -18,17 +18,6 @@ public class QueryData {
    private List<Boolean> sortAscending;
    
    /**
-    * Constructor for queries without an ORDER BY clause.
-    */
-   public QueryData(List<String> fields,
-                    Collection<String> tables,
-                    Predicate pred) {
-      this(fields, tables, pred,
-            new ArrayList<String>(),
-            new ArrayList<Boolean>());
-   }
-   
-   /**
     * Saves the field and table list and predicate.
     * 
     * Constructor for queries with ORDER BY clause.
