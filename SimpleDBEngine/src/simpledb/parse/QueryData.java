@@ -114,33 +114,41 @@ public class QueryData {
    public String toString() {
       String result = "select ";
       
+      // normal fields
       for (String fldname : fields)
          result += fldname + ", ";
       result = result.substring(0, result.length()-2); //remove final comma
       
+      // aggregate functions
+      for (String aggFn : aggregateFunctions)
+          result += aggFn + ", ";
+       result = result.substring(0, result.length()-2); //remove final comma
+      
+      // tables
       result += " from ";
       for (String tblname : tables)
          result += tblname + ", ";
       result = result.substring(0, result.length()-2); //remove final comma
       
+      // predicates
       String predstring = pred.toString();
       if (!predstring.equals(""))
          result += " where " + predstring;
       
-      if (!groupFields.isEmpty()) { // GROUP BY
+      // group by
+      if (!groupFields.isEmpty()) {
     	    result += " group by ";
 
     	    for (int i = 0; i < groupFields.size(); i++) {
     	        result += groupFields.get(i);
-    	        result += " ";
-    	        result += aggregateFunctions.get(i);
 
     	        if (i < groupFields.size() - 1)
     	            result += ", ";
     	    }
     	}
       
-      if (!sortFields.isEmpty()) { // ORDER BY
+      // order by
+      if (!sortFields.isEmpty()) {
           result += " order by ";
 
           for (int i = 0; i < sortFields.size(); i++) {
