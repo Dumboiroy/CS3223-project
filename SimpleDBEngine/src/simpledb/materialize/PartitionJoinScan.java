@@ -118,45 +118,29 @@ public class PartitionJoinScan implements Scan {
 			TempTable s2CurBucket = s2Buckets.get(currentBucket);
 
 			Scan s1CurBucketScan = s1CurBucket.open();
-			Scan s2CurBucketScan = (s2CurBucket != null) ? s2CurBucket.open() : null;
+			Scan s2CurBucketScan = s2CurBucket.open();
 
-			// Hash join: build hash map from s2 bucket
-			HashMap<Constant, List<GroupValue>> s2Map = new HashMap<>();
-			if (s2CurBucketScan != null) {
-				while (s2CurBucketScan.next()) {
-					Constant s2Key = s2CurBucketScan.getVal(fldname2);
-					GroupValue gv = new GroupValue(s2CurBucketScan, s2Schema.fields());
-					s2Map.computeIfAbsent(s2Key, k -> new ArrayList<>()).add(gv);
-				}
-				s2CurBucketScan.close();
-			}
+			// Hash join this bucket pair
+			HashJoinScan hjoin = new HashJoinScan(s1CurBucketScan, s2CurBucketScan,
+					fldname1, fldname2, s1Schema, s2Schema);
 
-			// Hash join: probe hash map with s1 bucket
+			// Collect all join results from this bucket pair
 			joinOutput.clear();
-			while (s1CurBucketScan.next()) {
-				Constant s1Key = s1CurBucketScan.getVal(fldname1);
-				List<GroupValue> s2Records = s2Map.get(s1Key);
+			hjoin.beforeFirst();
+			while (hjoin.next()) {
+				Map<String, Constant> combined = new HashMap<>();
 
-				if (s2Records != null) {
-					for (GroupValue s2Record : s2Records) {
-						// Combine s1 and s2 records
-						Map<String, Constant> combined = new HashMap<>();
-
-						// Copy all s1 fields
-						for (String fldname : s1Schema.fields()) {
-							combined.put(fldname, s1CurBucketScan.getVal(fldname));
-						}
-
-						// Copy all s2 fields
-						for (String fldname : s2Schema.fields()) {
-							combined.put(fldname, s2Record.getVal(fldname));
-						}
-
-						joinOutput.add(combined);
-					}
+				for (String fldname : s1Schema.fields()) {
+					combined.put(fldname, hjoin.getVal(fldname));
 				}
+
+				for (String fldname : s2Schema.fields()) {
+					combined.put(fldname, hjoin.getVal(fldname));
+				}
+
+				joinOutput.add(combined);
 			}
-			s1CurBucketScan.close();
+			hjoin.close();
 
 			// If this bucket has join results, set bucket output index to 0, and return
 			// true
