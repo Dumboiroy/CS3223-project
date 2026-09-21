@@ -4,7 +4,6 @@ import java.util.*;
 import simpledb.query.*;
 import simpledb.record.*;
 import simpledb.tx.Transaction;
-import simpledb.index.hash.HashIndex;
 
 /**
  * The Scan class for the </i>partitionjoin</i> operator. Partitions both input
@@ -18,10 +17,16 @@ public class PartitionJoinScan implements Scan {
 	private String fldname1, fldname2;
 	private Transaction tx;
 	private Schema s1Schema, s2Schema;
+	
+	private int numBuckets;
 
 	// Partitions: hashkey -> bucket(TempTable - stored on disk)
 	private Map<Integer, TempTable> s1Buckets;
 	private Map<Integer, TempTable> s2Buckets;
+
+	// Bucket sizes for hash optimization
+	private Map<Integer, Integer> s1BucketSizes;
+	private Map<Integer, Integer> s2BucketSizes;
 
 	// State for bucket iteration
 	private int currentBucket;
@@ -32,6 +37,7 @@ public class PartitionJoinScan implements Scan {
 
 	/**
 	 * Create a </i>partitionjoin</i> scan for the two underlying scans.
+	 * Currently uses hash join to join partitions. 
 	 *
 	 * @param tx       the transaction
 	 * @param s1       the LHS scan
@@ -42,7 +48,7 @@ public class PartitionJoinScan implements Scan {
 	 * @param fldname2 the RHS join field
 	 */
 	public PartitionJoinScan(Transaction tx, Scan s1, Scan s2, Schema s1Schema, Schema s2Schema,
-			String fldname1, String fldname2) {
+			String fldname1, String fldname2, int numBuckets) {
 		this.tx = tx;
 		this.s1 = s1;
 		this.s2 = s2;
@@ -50,12 +56,15 @@ public class PartitionJoinScan implements Scan {
 		this.s2Schema = s2Schema;
 		this.fldname1 = fldname1;
 		this.fldname2 = fldname2;
-
-		s1Buckets = new HashMap<>();
-		s2Buckets = new HashMap<>();
-		joinOutput = new ArrayList<>();
-		currentBucket = -1;
-		currentOutputIndex = -1;
+		
+		this.numBuckets = numBuckets;
+		this.s1Buckets = new HashMap<>();
+		this.s2Buckets = new HashMap<>();
+		this.s1BucketSizes = new HashMap<>();
+		this.s2BucketSizes = new HashMap<>();
+		this.joinOutput = new ArrayList<>();
+		this.currentBucket = -1;
+		this.currentOutputIndex = -1;
 
 		prePartition();
 		beforeFirst();
@@ -96,18 +105,22 @@ public class PartitionJoinScan implements Scan {
 			currentOutputIndex++;
 			return true;
 		}
-		// Current non-empty joined bucket exhausted. need to find new non-empty joined bucket.
+		// Current non-empty joined bucket exhausted. try to find new non-empty joined bucket.
 		currentBucket++;
 
-		// go through remaining buckets until we find a non-empty joined bucket.
-		// if no more non-empty joined buckets, this returns false.
-		return getNewJoinedBucket();
+		
+		return hasNonEmptyNextJoinedBucket();
 	}
 
-	private boolean getNewJoinedBucket() {
-		while (currentBucket < HashIndex.NUM_BUCKETS) {
-			// Either s1 or s2 have no records for this bucket -> join result is empty.
-			// Can just check next bucket.
+	/**
+	 * Currently joins buckets using Hash join.
+	 * @see simpledb.materialize.HashJoinScan
+	 */
+	private boolean hasNonEmptyNextJoinedBucket() {
+		while (currentBucket < this.numBuckets) {
+			// if either s1 or s2 have no records for this bucket 
+			// -> join result is empty.
+			// -> can just check next bucket.
 			if (!s1Buckets.containsKey(currentBucket) || !s2Buckets.containsKey(currentBucket)) {
 				currentBucket++;
 				continue;
@@ -120,11 +133,20 @@ public class PartitionJoinScan implements Scan {
 			Scan s1CurBucketScan = s1CurBucket.open();
 			Scan s2CurBucketScan = s2CurBucket.open();
 
-			// Hash join this bucket pair
-			HashJoinScan hjoin = new HashJoinScan(s1CurBucketScan, s2CurBucketScan,
-					fldname1, fldname2, s1Schema, s2Schema);
+			// Hash join this bucket pair, building hash on smaller table
+			int s1CurBucketSize = s1BucketSizes.get(currentBucket);
+			int s2CurBucketSize = s2BucketSizes.get(currentBucket);
 
-			// Collect all join results from this bucket pair
+			HashJoinScan hjoin;
+			if (s1CurBucketSize < s2CurBucketSize) {
+				hjoin = new HashJoinScan(s1CurBucketScan, s2CurBucketScan,
+						fldname1, fldname2, s1Schema, s2Schema);
+			} else {
+				hjoin = new HashJoinScan(s2CurBucketScan, s1CurBucketScan,
+						fldname2, fldname1, s2Schema, s1Schema);
+			}
+
+			// add all join results to joinOutput
 			joinOutput.clear();
 			hjoin.beforeFirst();
 			while (hjoin.next()) {
@@ -185,6 +207,9 @@ public class PartitionJoinScan implements Scan {
 				scan.setVal(fldname, s1.getVal(fldname));
 			}
 			scan.close();
+
+			// Track bucket size
+			s1BucketSizes.put(bucket, s1BucketSizes.getOrDefault(bucket, 0) + 1);
 		}
 
 		// Partition s2 into buckets
@@ -207,11 +232,14 @@ public class PartitionJoinScan implements Scan {
 				scan.setVal(fldname, s2.getVal(fldname));
 			}
 			scan.close();
+
+			// Track bucket size
+			s2BucketSizes.put(bucket, s2BucketSizes.getOrDefault(bucket, 0) + 1);
 		}
 	}
 
 	private int getBucket(Constant key) {
-		return key.hashCode() % HashIndex.NUM_BUCKETS;
+		return key.hashCode() % this.numBuckets;
 	}
 
 	/**

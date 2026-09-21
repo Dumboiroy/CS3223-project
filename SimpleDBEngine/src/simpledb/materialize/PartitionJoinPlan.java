@@ -10,6 +10,11 @@ public class PartitionJoinPlan implements Plan {
    private Plan p1, p2;
    private String fldname1, fldname2;
    private Schema sch = new Schema();
+   
+   int largerTableBlocks;
+   int numBuckets;
+   
+   final int AVAILABLE_BUFFER_BLOCKS = 8;
 
    public PartitionJoinPlan(Transaction tx, Plan p1, Plan p2,
                                  String fldname1, String fldname2) {
@@ -20,12 +25,15 @@ public class PartitionJoinPlan implements Plan {
       this.fldname2 = fldname2;
       sch.addAll(p1.schema());
       sch.addAll(p2.schema());
+      this.largerTableBlocks = Math.max(p1.blocksAccessed(), p2.blocksAccessed());
+      this.numBuckets = (int) Math.ceil((double) largerTableBlocks / AVAILABLE_BUFFER_BLOCKS);
    }
 
    public Scan open() {
       Scan s1 = p1.open();
       Scan s2 = p2.open();
-      return new PartitionJoinScan(tx, s1, s2, p1.schema(), p2.schema(), fldname1, fldname2);
+      System.out.println("Partition Joining with " + numBuckets + " buckets.");
+      return new PartitionJoinScan(tx, s1, s2, p1.schema(), p2.schema(), fldname1, fldname2, numBuckets);
    }
 
    public int blocksAccessed() {

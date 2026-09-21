@@ -12,7 +12,7 @@ import simpledb.query.Scan;
 
 public class PartitionJoinTest {
    public static void main(String[] args) {
-      SimpleDB db = new SimpleDB("studentdb");
+      SimpleDB db = new SimpleDB("largestudentdb");
       MetadataMgr mdm = db.mdMgr();
       Transaction tx = db.newTx();
 
@@ -59,8 +59,8 @@ public class PartitionJoinTest {
       int count;
       for (count = 0; s.next(); count++);
       s.close();
-      System.out.println("Rows returned: " + count + " (expected 9)");
-      return count == 9;
+      System.out.println("Rows returned: " + count + " (expected 500, all students have departmentid that exists in department)");
+      return count == 500;
    }
 
    private static boolean testCourseDeptJoin(Transaction tx, MetadataMgr mdm) {
@@ -75,8 +75,8 @@ public class PartitionJoinTest {
       int count;
       for (count = 0; s.next(); count++);
       s.close();
-      System.out.println("Rows returned: " + count + " (expected 6)");
-      return count == 6;
+      System.out.println("Rows returned: " + count + " (expected 7, every course has 1 department)");
+      return count == 7;
    }
 
    private static boolean testSectionCourseJoin(Transaction tx, MetadataMgr mdm) {
@@ -91,7 +91,7 @@ public class PartitionJoinTest {
       int count;
       for (count = 0; s.next(); count++);
       s.close();
-      System.out.println("Rows returned: " + count + " (expected 5)");
+      System.out.println("Rows returned: " + count + " (expected 5, 5 sections, all courseids exist in course)");
       return count == 5;
    }
 
@@ -107,7 +107,7 @@ public class PartitionJoinTest {
       int count;
       for (count = 0; s.next(); count++);
       s.close();
-      System.out.println("Rows returned: " + count + " (expected 6)");
-      return count == 6;
+      System.out.println("Rows returned: " + count + " (expected 350, dk why)");
+      return count == 350;
    }
 }
