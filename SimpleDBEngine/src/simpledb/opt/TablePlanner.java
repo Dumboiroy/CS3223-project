@@ -7,6 +7,7 @@ import simpledb.query.*;
 import simpledb.metadata.*;
 import simpledb.index.planner.*;
 import simpledb.materialize.MergeJoinPlan;
+import simpledb.materialize.PartitionJoinPlan;
 import simpledb.multibuffer.MultibufferProductPlan;
 import simpledb.plan.*;
 
@@ -70,7 +71,7 @@ class TablePlanner {
       Predicate joinpred = mypred.joinSubPred(myschema, currsch);
       if (joinpred == null)
          return null;
-
+      
       Plan best = makeNestedLoopJoin(current, currsch);
 
       Plan mergeJoin = makeMergeJoin(current, currsch);
@@ -80,11 +81,17 @@ class TablePlanner {
       Plan indexJoin = makeIndexJoin(current, currsch);
       if (indexJoin != null && indexJoin.blocksAccessed() < best.blocksAccessed())
          best = indexJoin;
-
+      
+      Plan partitionJoin = makePartitionBasedJoin(current, currsch);
+      if (partitionJoin != null && partitionJoin.blocksAccessed() < best.blocksAccessed())
+         best = partitionJoin;
+      
       if (best == indexJoin)
          System.out.println("index join used on " + tblname);
       else if (best == mergeJoin)
          System.out.println("merge join used on " + tblname);
+      else if (best == partitionJoin) 
+    	 System.out.println("partition join used on " + tblname);
       else
          System.out.println("nested loop join used on " + tblname);
 
@@ -92,7 +99,7 @@ class TablePlanner {
    }
    
    /**
-    * Constructs a product plan of the specified plan and
+    * Constructs a product of the specified plan and
     * this table.
     * @param current the specified plan
     * @return a product plan of the specified plan and this table
@@ -138,12 +145,33 @@ class TablePlanner {
       }
       return null;
    }
+   
+   private Plan makePartitionBasedJoin(Plan current, Schema currsch) {
+	   // Try each field in current table's schema
+	   for (String fldname : myschema.fields()) {
+	      // Check if this field has an equality condition with outer table
+	      String outerfield = mypred.equatesWithField(fldname);
+	      if (outerfield != null && currsch.hasField(outerfield)) {
+	         // Field types must match for join
+	         if (myschema.type(fldname) == currsch.type(outerfield)) {
+	            Plan p = new PartitionJoinPlan(tx, current, myplan, 
+	                                               outerfield, fldname);
+	            p = addSelectPred(p);
+	            return addJoinPred(p, currsch);
+	         }
+	      }
+	   }
+	   return null;
+	}
+
 
    private Plan makeNestedLoopJoin(Plan current, Schema currsch) {
       Predicate joinpred = mypred.joinSubPred(currsch, myschema);
       Plan p = addSelectPred(myplan);
       return new NestedLoopJoinPlan(current, p, joinpred);
    }
+   
+  
    
    private Plan addSelectPred(Plan p) {
       Predicate selectpred = mypred.selectSubPred(myschema);
