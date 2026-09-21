@@ -6,12 +6,14 @@ import simpledb.query.*;
 import simpledb.record.*;
 
 public class PartitionJoinPlan implements Plan {
+   private Transaction tx;
    private Plan p1, p2;
    private String fldname1, fldname2;
    private Schema sch = new Schema();
 
-   public PartitionJoinPlan(Transaction tx, Plan p1, Plan p2, 
+   public PartitionJoinPlan(Transaction tx, Plan p1, Plan p2,
                                  String fldname1, String fldname2) {
+      this.tx = tx;
       this.p1 = p1;
       this.p2 = p2;
       this.fldname1 = fldname1;
@@ -23,7 +25,7 @@ public class PartitionJoinPlan implements Plan {
    public Scan open() {
       Scan s1 = p1.open();
       Scan s2 = p2.open();
-      return new PartitionJoinScan(s1, s2, p1.schema().fields(), p2.schema().fields(), fldname1, fldname2);
+      return new PartitionJoinScan(tx, s1, s2, p1.schema(), p2.schema(), fldname1, fldname2);
    }
 
    public int blocksAccessed() {

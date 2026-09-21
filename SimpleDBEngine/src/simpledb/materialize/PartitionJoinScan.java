@@ -2,61 +2,62 @@ package simpledb.materialize;
 
 import java.util.*;
 import simpledb.query.*;
+import simpledb.record.*;
+import simpledb.tx.Transaction;
+import simpledb.index.hash.HashIndex;
 
 /**
  * The Scan class for the </i>partitionjoin</i> operator. Partitions both input
- * scans by join key, then performs hash join on each partition pair.
- * 
+ * scans into fixed hash buckets by join key, then performs hash join on each
+ * bucket pair.
+ *
  * @author Dumboiroy
  */
 public class PartitionJoinScan implements Scan {
 	private Scan s1, s2;
 	private String fldname1, fldname2;
+	private Transaction tx;
+	private Schema s1Schema, s2Schema;
 
-	// State for partition iteration
-	private Constant currentPartitionKey;
-	private List<GroupValue> s1Partition;
-	private List<GroupValue> s2Partition;
+	// Partitions: hashkey -> bucket(TempTable - stored on disk)
+	private Map<Integer, TempTable> s1Buckets;
+	private Map<Integer, TempTable> s2Buckets;
+
+	// State for bucket iteration
+	private int currentBucket;
 
 	// State for output iteration
 	private List<Map<String, Constant>> joinOutput;
 	private int currentOutputIndex;
-	private boolean s1Exhausted;
-
-	// Track the peeked record (first record of next partition)
-	// This is used because Scan doesn't have a restorePosition().
-	private GroupValue peekedRecord;
-
-	private List<String> s1Fields;
-	private List<String> s2Fields;
 
 	/**
 	 * Create a </i>partitionjoin</i> scan for the two underlying scans.
-	 * 
+	 *
+	 * @param tx       the transaction
 	 * @param s1       the LHS scan
 	 * @param s2       the RHS scan
-	 * @param s1Fields the field names from the LHS scan
-	 * @param s2Fields the field names from the RHS scan
+	 * @param s1Schema the schema of the LHS scan
+	 * @param s2Schema the schema of the RHS scan
 	 * @param fldname1 the LHS join field
 	 * @param fldname2 the RHS join field
 	 */
-	public PartitionJoinScan(Scan s1, Scan s2, List<String> s1Fields, List<String> s2Fields, String fldname1,
-			String fldname2) {
+	public PartitionJoinScan(Transaction tx, Scan s1, Scan s2, Schema s1Schema, Schema s2Schema,
+			String fldname1, String fldname2) {
+		this.tx = tx;
 		this.s1 = s1;
 		this.s2 = s2;
+		this.s1Schema = s1Schema;
+		this.s2Schema = s2Schema;
 		this.fldname1 = fldname1;
 		this.fldname2 = fldname2;
 
-		this.s1Fields = s1Fields;
-		this.s2Fields = s2Fields;
-
-		s1Partition = new ArrayList<>();
-		s2Partition = new ArrayList<>();
+		s1Buckets = new HashMap<>();
+		s2Buckets = new HashMap<>();
 		joinOutput = new ArrayList<>();
+		currentBucket = -1;
 		currentOutputIndex = -1;
-		s1Exhausted = false;
-		peekedRecord = null;
 
+		prePartition();
 		beforeFirst();
 	}
 
@@ -71,97 +72,69 @@ public class PartitionJoinScan implements Scan {
 	}
 
 	/**
-	 * Position the scan before the first record, by positioning each underlying
-	 * scan before their first records.
+	 * Position the scan before the first record. This is done by positioning the
+	 * underlying bucket map before its first bucket and the first join result
+	 * before its first record.
 	 * 
 	 * @see simpledb.query.Scan#beforeFirst()
 	 */
 	public void beforeFirst() {
-		s1.beforeFirst();
-		s2.beforeFirst();
-		s1Partition.clear();
-		s2Partition.clear();
 		joinOutput.clear();
+		currentBucket = -1;
 		currentOutputIndex = -1;
-		s1Exhausted = false;
-		peekedRecord = null;
 	}
 
 	/**
-	 * Move to the next record. This is where the action is.
-	 * <P>
-	 * Partitions the input scans by join key and performs hash join on each
-	 * partition pair. If there are remaining results from the current partition,
-	 * increments the output index. Otherwise, creates a new output List and
-	 * processes the next partition in s1. When all partitions in s1 have been
-	 * processed, return false.
-	 * 
+	 * Move to the next record. Iterates through the pre-partitioned buckets and
+	 * performs hash join on each bucket pair.
+	 *
 	 * @see simpledb.query.Scan#next()
 	 */
 	public boolean next() {
-		// If we have more output records in the current partition, return the next one
+		// If we have more output from the current bucket's join, return next
 		if (currentOutputIndex + 1 < joinOutput.size()) {
 			currentOutputIndex++;
 			return true;
 		}
+		// Current non-empty joined bucket exhausted. need to find new non-empty joined bucket.
+		currentBucket++;
 
-		// current partition output exhausted.
-		// load next partition.
-		while (!s1Exhausted) {
-			if (peekedRecord != null) {
-				// Get peeked current partition record from previous partition step
-				currentPartitionKey = peekedRecord.getVal(fldname1);
-				s1Partition.clear();
-				s1Partition.add(peekedRecord);
-				peekedRecord = null;
-			} else {
-				if (!s1.next()) {
-					// s1 is exhausted. partition-hash-join is finished.
-					s1Exhausted = true;
-					return false;
-				}
+		// go through remaining buckets until we find a non-empty joined bucket.
+		// if no more non-empty joined buckets, this returns false.
+		return getNewJoinedBucket();
+	}
 
-				// get current partition key
-				currentPartitionKey = s1.getVal(fldname1);
-
-				// Buffer first record of this partition
-				s1Partition.clear();
-				s1Partition.add(new GroupValue(s1, s1Fields));
+	private boolean getNewJoinedBucket() {
+		while (currentBucket < HashIndex.NUM_BUCKETS) {
+			// Either s1 or s2 have no records for this bucket -> join result is empty.
+			// Can just check next bucket.
+			if (!s1Buckets.containsKey(currentBucket) || !s2Buckets.containsKey(currentBucket)) {
+				currentBucket++;
+				continue;
 			}
 
-			// Read remaining s1 records with same partition key
-			boolean s1HasMore = false;
-			while (s1.next()) {
-				Constant nextKey = s1.getVal(fldname1);
-				if (nextKey.equals(currentPartitionKey)) {
-					s1Partition.add(new GroupValue(s1, s1Fields));
-				} else {
-					// This record belongs to next partition, save to peekedRecord.
-					peekedRecord = new GroupValue(s1, s1Fields);
-					s1HasMore = true;
-					break;
-				}
-			}
-			// If loop exited normally (not via break), s1 is exhausted.
-			if (!s1HasMore) {
-				s1Exhausted = true;
-			}
+			// Open scans for this bucket
+			TempTable s1CurBucket = s1Buckets.get(currentBucket);
+			TempTable s2CurBucket = s2Buckets.get(currentBucket);
 
-			// Build hash map from s2 records with matching partition key
+			Scan s1CurBucketScan = s1CurBucket.open();
+			Scan s2CurBucketScan = (s2CurBucket != null) ? s2CurBucket.open() : null;
+
+			// Hash join: build hash map from s2 bucket
 			HashMap<Constant, List<GroupValue>> s2Map = new HashMap<>();
-			s2.beforeFirst();
-			while (s2.next()) {
-				Constant s2Key = s2.getVal(fldname2);
-				if (s2Key.equals(currentPartitionKey)) {
-					GroupValue gv = new GroupValue(s2, s2Fields);
+			if (s2CurBucketScan != null) {
+				while (s2CurBucketScan.next()) {
+					Constant s2Key = s2CurBucketScan.getVal(fldname2);
+					GroupValue gv = new GroupValue(s2CurBucketScan, s2Schema.fields());
 					s2Map.computeIfAbsent(s2Key, k -> new ArrayList<>()).add(gv);
 				}
+				s2CurBucketScan.close();
 			}
 
-			// Hash join: probe hash map with s1 records
+			// Hash join: probe hash map with s1 bucket
 			joinOutput.clear();
-			for (GroupValue s1Record : s1Partition) {
-				Constant s1Key = s1Record.getVal(fldname1);
+			while (s1CurBucketScan.next()) {
+				Constant s1Key = s1CurBucketScan.getVal(fldname1);
 				List<GroupValue> s2Records = s2Map.get(s1Key);
 
 				if (s2Records != null) {
@@ -170,12 +143,12 @@ public class PartitionJoinScan implements Scan {
 						Map<String, Constant> combined = new HashMap<>();
 
 						// Copy all s1 fields
-						for (String fldname : s1Fields) {
-							combined.put(fldname, s1Record.getVal(fldname));
+						for (String fldname : s1Schema.fields()) {
+							combined.put(fldname, s1CurBucketScan.getVal(fldname));
 						}
 
 						// Copy all s2 fields
-						for (String fldname : s2Fields) {
+						for (String fldname : s2Schema.fields()) {
 							combined.put(fldname, s2Record.getVal(fldname));
 						}
 
@@ -183,16 +156,78 @@ public class PartitionJoinScan implements Scan {
 					}
 				}
 			}
+			s1CurBucketScan.close();
 
-			// If we have output, set output index to 0.
+			// If this bucket has join results, set bucket output index to 0, and return
+			// true
 			if (!joinOutput.isEmpty()) {
 				currentOutputIndex = 0;
 				return true;
 			}
-			// Otherwise, this partition has no join results.
+
+			// s1 and s2 have results for this bucket, but the actual join is empty
+			// (limitation of hashing)
+			// the joined bucket is empty. continue to next bucket.
+			currentBucket++;
 		}
-		// when s1 is fully exhausted, return false.
+		// All buckets exhausted, return false.
 		return false;
+	}
+
+	/**
+	 * Partition both tables into buckets. Buckets are stored on disk as TempTables
+	 *
+	 * @see simpledb.materialize.TempTable
+	 * @see simpledb.query.Scan#next()
+	 */
+	private void prePartition() {
+		// Partition s1 into buckets
+		s1.beforeFirst();
+		while (s1.next()) {
+			Constant key = s1.getVal(fldname1);
+			int bucket = getBucket(key);
+
+			// Get or create TempTable for this bucket
+			TempTable tt = s1Buckets.get(bucket);
+			if (tt == null) {
+				tt = new TempTable(tx, s1Schema);
+				s1Buckets.put(bucket, tt);
+			}
+
+			// Write record to TempTable
+			UpdateScan scan = (UpdateScan) tt.open();
+			scan.insert();
+			for (String fldname : s1Schema.fields()) {
+				scan.setVal(fldname, s1.getVal(fldname));
+			}
+			scan.close();
+		}
+
+		// Partition s2 into buckets
+		s2.beforeFirst();
+		while (s2.next()) {
+			Constant key = s2.getVal(fldname2);
+			int bucket = getBucket(key);
+
+			// Get or create TempTable for this bucket
+			TempTable tt = s2Buckets.get(bucket);
+			if (tt == null) {
+				tt = new TempTable(tx, s2Schema);
+				s2Buckets.put(bucket, tt);
+			}
+
+			// Write record to TempTable
+			UpdateScan scan = (UpdateScan) tt.open();
+			scan.insert();
+			for (String fldname : s2Schema.fields()) {
+				scan.setVal(fldname, s2.getVal(fldname));
+			}
+			scan.close();
+		}
+	}
+
+	private int getBucket(Constant key) {
+		return key.hashCode() % HashIndex.NUM_BUCKETS;
 	}
 
 	/**
