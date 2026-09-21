@@ -16,22 +16,38 @@ public class PartitionJoinTest {
       MetadataMgr mdm = db.mdMgr();
       Transaction tx = db.newTx();
 
+      java.util.List<Boolean> test_result = new java.util.ArrayList<>();
+
       // Test 1: Student-Dept join on majorid = did
-      testStudentDeptJoin(tx, mdm);
+      test_result.add(testStudentDeptJoin(tx, mdm));
 
       // Test 2: Course-Dept join on deptid = did
-      testCourseDeptJoin(tx, mdm);
+      test_result.add(testCourseDeptJoin(tx, mdm));
 
       // Test 3: Section-Course join on courseid = cid
-      testSectionCourseJoin(tx, mdm);
+      test_result.add(testSectionCourseJoin(tx, mdm));
 
       // Test 4: Enroll-Section join on sectionid = sectid
-      testEnrollSectionJoin(tx, mdm);
+      test_result.add(testEnrollSectionJoin(tx, mdm));
 
       tx.commit();
+
+      // Print summary
+      System.out.println("\n" + "=".repeat(50));
+      System.out.println("TEST RESULTS");
+      System.out.println("=".repeat(50));
+      for (int i = 0; i < test_result.size(); i++) {
+         String status = test_result.get(i) ? "PASS" : "FAIL";
+         System.out.println("Test " + (i + 1) + ": " + status);
+      }
+      boolean allPass = test_result.stream().allMatch(b -> b);
+      if (allPass) {
+         System.out.println("\nAll tests passed!");
+      }
+      System.out.println("=".repeat(50));
    }
 
-   private static void testStudentDeptJoin(Transaction tx, MetadataMgr mdm) {
+   private static boolean testStudentDeptJoin(Transaction tx, MetadataMgr mdm) {
       System.out.println("\n=== Test 1: Student-Dept Join (majorid = did) ===");
       System.out.println("select sid, sname, majorid, gradyear, did, dname from student, dept where majorid = did order by sid");
       Plan studentplan = new TablePlan(tx, "student", mdm);
@@ -44,10 +60,10 @@ public class PartitionJoinTest {
       for (count = 0; s.next(); count++);
       s.close();
       System.out.println("Rows returned: " + count + " (expected 9)");
-      assert count == 9 : "Student-Dept join failed";
+      return count == 9;
    }
 
-   private static void testCourseDeptJoin(Transaction tx, MetadataMgr mdm) {
+   private static boolean testCourseDeptJoin(Transaction tx, MetadataMgr mdm) {
       System.out.println("\n=== Test 2: Course-Dept Join (deptid = did) ===");
       System.out.println("SELECT cid, title, deptid, did, dname FROM course, dept WHERE deptid = did");
       Plan courseplan = new TablePlan(tx, "course", mdm);
@@ -60,10 +76,10 @@ public class PartitionJoinTest {
       for (count = 0; s.next(); count++);
       s.close();
       System.out.println("Rows returned: " + count + " (expected 6)");
-      assert count == 6 : "Course-Dept join failed";
+      return count == 6;
    }
 
-   private static void testSectionCourseJoin(Transaction tx, MetadataMgr mdm) {
+   private static boolean testSectionCourseJoin(Transaction tx, MetadataMgr mdm) {
       System.out.println("\n=== Test 3: Section-Course Join (courseid = cid) ===");
       System.out.println("SELECT sectid, courseid, prof, yearoffered, cid, title, deptid FROM section, course WHERE courseid = cid");
       Plan sectionplan = new TablePlan(tx, "section", mdm);
@@ -76,10 +92,10 @@ public class PartitionJoinTest {
       for (count = 0; s.next(); count++);
       s.close();
       System.out.println("Rows returned: " + count + " (expected 5)");
-      assert count == 5 : "Section-Course join failed";
+      return count == 5;
    }
 
-   private static void testEnrollSectionJoin(Transaction tx, MetadataMgr mdm) {
+   private static boolean testEnrollSectionJoin(Transaction tx, MetadataMgr mdm) {
       System.out.println("\n=== Test 4: Enroll-Section Join (sectionid = sectid) ===");
       System.out.println("SELECT eid, studentid, sectionid, grade, sectid, courseid, prof, yearoffered FROM enroll, section WHERE sectionid = sectid");
       Plan enrollplan = new TablePlan(tx, "enroll", mdm);
@@ -92,6 +108,6 @@ public class PartitionJoinTest {
       for (count = 0; s.next(); count++);
       s.close();
       System.out.println("Rows returned: " + count + " (expected 6)");
-      assert count == 6 : "Enroll-Section join failed";
+      return count == 6;
    }
 }
