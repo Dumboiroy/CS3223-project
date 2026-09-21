@@ -51,6 +51,7 @@ public class SimpleIJNoJDBC {
             	} 
             	catch (RuntimeException e) {
             		System.out.println("Runtime Exception: " + e);
+            		e.printStackTrace();
             	}
             }
             

@@ -13,20 +13,13 @@ public class QueryData {
    private Collection<String> tables;
    private Predicate pred;
    
+   // fields used for GROUP BY 
+   private List<String> groupFields;
+   private List<String> aggregateFunctions;
+   
    // fields used for ORDER BY clause
    private List<String> sortFields;
    private List<Boolean> sortAscending;
-   
-   /**
-    * Constructor for queries without an ORDER BY clause.
-    */
-   public QueryData(List<String> fields,
-                    Collection<String> tables,
-                    Predicate pred) {
-      this(fields, tables, pred,
-            new ArrayList<String>(),
-            new ArrayList<Boolean>());
-   }
    
    /**
     * Saves the field and table list and predicate.
@@ -37,7 +30,9 @@ public class QueryData {
 		   			Collection<String> tables,
 		   			Predicate pred,
 		   			List<String> sortFields,
-                    List<Boolean> sortAscending) {
+                    List<Boolean> sortAscending,
+                    List<String> groupFields,
+                    List<String> aggregateFunctions) {
 	   
 	   if (sortFields.size() != sortAscending.size())
 	         throw new IllegalArgumentException(
@@ -48,8 +43,8 @@ public class QueryData {
 	      this.pred = pred;
 	      this.sortFields = sortFields; 
 	      this.sortAscending = sortAscending; // true = ascending, false = descending
-	      
-	   
+	      this.groupFields = groupFields;
+	      this.aggregateFunctions = aggregateFunctions;
    }
    
    /**
@@ -78,6 +73,25 @@ public class QueryData {
    }
    
    /**
+    * Returns the fields mentioned in the GROUP BY clause.
+    * @return a list of grouping field names (empty if no GROUP BY clause)
+    */
+   public List<String> groupFields() {
+      return groupFields;
+   }
+
+   /**
+    * Returns the aggregate functions specified in the GROUP BY clause.
+    * @return a list of aggregate function strings like "count(id)", "sum(salary)"
+    *         (empty if no GROUP BY clause)
+    */
+   public List<String> aggregateFunctions() {
+      return aggregateFunctions;
+   }
+
+
+   
+   /**
     * Returns the fields mentioned in the ORDER BY clause.
     *
     * @return a list of sorting field names
@@ -100,20 +114,41 @@ public class QueryData {
    public String toString() {
       String result = "select ";
       
+      // normal fields
       for (String fldname : fields)
          result += fldname + ", ";
       result = result.substring(0, result.length()-2); //remove final comma
       
+      // aggregate functions
+      for (String aggFn : aggregateFunctions)
+          result += aggFn + ", ";
+       result = result.substring(0, result.length()-2); //remove final comma
+      
+      // tables
       result += " from ";
       for (String tblname : tables)
          result += tblname + ", ";
       result = result.substring(0, result.length()-2); //remove final comma
       
+      // predicates
       String predstring = pred.toString();
       if (!predstring.equals(""))
          result += " where " + predstring;
       
-      if (!sortFields.isEmpty()) { // ORDER BY
+      // group by
+      if (!groupFields.isEmpty()) {
+    	    result += " group by ";
+
+    	    for (int i = 0; i < groupFields.size(); i++) {
+    	        result += groupFields.get(i);
+
+    	        if (i < groupFields.size() - 1)
+    	            result += ", ";
+    	    }
+    	}
+      
+      // order by
+      if (!sortFields.isEmpty()) {
           result += " order by ";
 
           for (int i = 0; i < sortFields.size(); i++) {
