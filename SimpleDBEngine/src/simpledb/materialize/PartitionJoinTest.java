@@ -107,7 +107,8 @@ public class PartitionJoinTest {
       int count;
       for (count = 0; s.next(); count++);
       s.close();
-      System.out.println("Rows returned: " + count + " (expected 350, dk why)");
-      return count == 350;
+      System.out.println("Rows returned: " + count + " (expected 250, only sectionid 13 exists in section.)");
+      System.out.println("Since count(sectionid) from enroll where sectionid = 13 gives 250 rows, the expected is 250.");
+      return count == 250;
    }
 }
