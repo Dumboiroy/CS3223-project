@@ -239,7 +239,7 @@ public class PartitionJoinScan implements Scan {
 	}
 
 	private int getBucket(Constant key) {
-		return key.hashCode() % this.numBuckets;
+		return (key.hashCode() & 0x7fffffff) % this.numBuckets;
 	}
 
 	/**
