@@ -34,7 +34,6 @@ public class PartitionJoinPlan implements Plan {
    public Scan open() {
       Scan s1 = p1.open();
       Scan s2 = p2.open();
-      System.out.println("Partition Joining with " + numBuckets + " buckets.");
       return new PartitionJoinScan(tx, s1, s2, p1.schema(), p2.schema(), fldname1, fldname2, numBuckets);
    }
 
