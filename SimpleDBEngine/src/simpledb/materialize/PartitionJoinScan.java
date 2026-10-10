@@ -57,6 +57,9 @@ public class PartitionJoinScan implements Scan {
 		this.fldname1 = fldname1;
 		this.fldname2 = fldname2;
 		
+		if (numBuckets <= 0) {
+			throw new IllegalArgumentException("Number of buckets must be > 0.");
+		}
 		this.numBuckets = numBuckets;
 		this.s1Buckets = new HashMap<>();
 		this.s2Buckets = new HashMap<>();

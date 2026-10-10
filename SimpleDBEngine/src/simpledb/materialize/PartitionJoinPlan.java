@@ -26,7 +26,9 @@ public class PartitionJoinPlan implements Plan {
       sch.addAll(p1.schema());
       sch.addAll(p2.schema());
       this.largerTableBlocks = Math.max(p1.blocksAccessed(), p2.blocksAccessed());
-      this.numBuckets = (int) Math.ceil((double) largerTableBlocks / AVAILABLE_BUFFER_BLOCKS);
+      this.numBuckets = Math.max(
+    		  1,
+    		  (int) Math.ceil((double) largerTableBlocks / AVAILABLE_BUFFER_BLOCKS));
    }
 
    public Scan open() {
