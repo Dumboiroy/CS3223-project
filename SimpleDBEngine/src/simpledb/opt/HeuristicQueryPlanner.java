@@ -184,12 +184,19 @@ public class HeuristicQueryPlanner implements QueryPlanner {
 					break;
 				}
 			}
-			// Check if field is in aggFields
+			// Check if field matches the argument of any aggregate function
 			if (!found) {
 				for (String aggField : aggFields) {
-					if (aggField.contains(field)) {
-						found = true;
-						break;
+					int openParen = aggField.indexOf('(');
+					int closeParen = aggField.indexOf(')');
+					if (openParen != -1 && closeParen != -1 && closeParen > openParen) {
+						// this is definitely an aggregate field
+						String aggArgField = aggField.substring(openParen + 1, closeParen).trim();
+						// compare exact aggregated field name
+						if (aggArgField.equals(field)) {
+							found = true;
+							break;
+						}
 					}
 				}
 			}
