@@ -38,4 +38,13 @@ public class OptimizedProductPlan implements Plan {
    public Schema schema() {
       return bestplan.schema();
    }
+
+   /**
+    * Delegates to the best ordering of the product, since this
+    * node is only a wrapper around it.
+    * @see simpledb.plan.Plan#toString(int)
+    */
+   public String toString(int depth) {
+      return bestplan.toString(depth);
+   }
 }

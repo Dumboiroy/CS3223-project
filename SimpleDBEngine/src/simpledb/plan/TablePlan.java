@@ -70,4 +70,15 @@ public class TablePlan implements Plan {
    public Schema schema() {
       return layout.schema();
    }
+
+   /**
+    * Returns a string representation of this leaf node
+    * at the specified depth, with its cost estimates.
+    * @see simpledb.plan.Plan#toString(int)
+    */
+   public String toString(int depth) {
+      String indent = "  ".repeat(depth);
+      return indent + "TablePlan(" + tblname + ")"
+           + " [blocks: " + blocksAccessed() + ", records: " + recordsOutput() + "]\n";
+   }
 }
