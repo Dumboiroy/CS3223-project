@@ -98,4 +98,15 @@ public class GroupByPlan implements Plan {
    public Schema schema() {
       return sch;
    }
+
+   /**
+    * Return a string representation of this plan and its subtree.
+    * @see simpledb.plan.Plan#toString(int)
+    */
+   public String toString(int depth) {
+      String indent = "  ".repeat(depth);
+      return indent + "GroupByPlan(" + String.join(", ", groupfields) + ")"
+            + " [blocks: " + blocksAccessed() + ", records: " + recordsOutput() + "]\n"
+            + p.toString(depth + 1);
+   }
 }

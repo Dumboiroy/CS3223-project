@@ -57,4 +57,12 @@ public class PartitionJoinPlan implements Plan {
    public Schema schema() {
       return sch;
    }
+
+   public String toString(int depth) {
+      String indent = "  ".repeat(depth);
+      return indent + "PartitionJoinPlan(" + fldname1 + " = " + fldname2 + ")"
+            + " [blocks: " + blocksAccessed() + ", records: " + recordsOutput() + "]\n"
+            + p1.toString(depth + 1)
+            + p2.toString(depth + 1);
+   }
 }

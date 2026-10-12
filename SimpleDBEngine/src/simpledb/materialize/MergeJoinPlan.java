@@ -98,5 +98,17 @@ public class MergeJoinPlan implements Plan {
    public Schema schema() {
       return sch;
    }
+
+   /**
+    * Return a string representation of this plan and its subtrees.
+    * @see simpledb.plan.Plan#toString(int)
+    */
+   public String toString(int depth) {
+      String indent = "  ".repeat(depth);
+      return indent + "MergeJoinPlan(" + fldname1 + " = " + fldname2 + ")"
+            + " [blocks: " + blocksAccessed() + ", records: " + recordsOutput() + "]\n"
+            + p1.toString(depth + 1)
+            + p2.toString(depth + 1);
+   }
 }
 

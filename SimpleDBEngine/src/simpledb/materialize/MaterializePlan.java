@@ -84,4 +84,15 @@ public class MaterializePlan implements Plan {
    public Schema schema() {
       return srcplan.schema();
    }
+
+   /**
+    * Return a string representation of this plan and its subtree.
+    * @see simpledb.plan.Plan#toString(int)
+    */
+   public String toString(int depth) {
+      String indent = "  ".repeat(depth);
+      return indent + "MaterializePlan" + " [blocks: " + blocksAccessed()
+            + ", records: " + recordsOutput() + "]\n"
+            + srcplan.toString(depth + 1);
+   }
 }
