@@ -74,6 +74,17 @@ public class IndexSelectPlan implements Plan {
     * @see simpledb.plan.Plan#schema()
     */
    public Schema schema() {
-      return p.schema(); 
+      return p.schema();
+   }
+
+   /**
+    * Returns a string representation of the plan tree at the specified depth.
+    * @see simpledb.plan.Plan#toString(int)
+    */
+   public String toString(int depth) {
+      String indent = "  ".repeat(depth);
+      return indent + "IndexSelectPlan(" + val + ")" +
+            " [blocks: " + blocksAccessed() + ", records: " + recordsOutput() + "]" + "\n" +
+            p.toString(depth + 1);
    }
 }

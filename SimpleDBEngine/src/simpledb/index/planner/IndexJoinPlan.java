@@ -88,4 +88,16 @@ public class IndexJoinPlan implements Plan {
    public Schema schema() {
       return sch;
    }
+
+   /**
+    * Returns a string representation of the plan tree at the specified depth.
+    * @see simpledb.plan.Plan#toString(int)
+    */
+   public String toString(int depth) {
+      String indent = "  ".repeat(depth);
+      return indent + "IndexJoinPlan(" + joinfield + ")" +
+            " [blocks: " + blocksAccessed() + ", records: " + recordsOutput() + "]" + "\n" +
+            p1.toString(depth + 1) +
+            p2.toString(depth + 1);
+   }
 }
