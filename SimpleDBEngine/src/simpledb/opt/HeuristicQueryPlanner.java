@@ -78,7 +78,12 @@ public class HeuristicQueryPlanner implements QueryPlanner {
 		// Step 5: Project on the field names
 		Plan p = new ProjectPlan(currentplan, projectionFields);
 
-		// Step 6: Add sorting only when ORDER BY is present
+		// Step 6: Remove duplicate rows only when DISTINCT is present
+		if (data.isDistinct()) {
+			p = new DistinctPlan(tx, p, projectionFields);
+		}
+
+		// Step 7: Add sorting only when ORDER BY is present
 		if (!data.sortFields().isEmpty()) {
 			p = new SortPlan(tx, p, data.sortFields(), data.sortAscending());
 		}

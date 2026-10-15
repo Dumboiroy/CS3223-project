@@ -20,10 +20,13 @@ public class QueryData {
    // fields used for ORDER BY clause
    private List<String> sortFields;
    private List<Boolean> sortAscending;
-   
+
+   // flag used for DISTINCT clause
+   private boolean isDistinct;
+
    /**
     * Saves the field and table list and predicate.
-    * 
+    *
     * Constructor for queries with ORDER BY clause.
     */
    public QueryData(List<String> fields,
@@ -32,8 +35,9 @@ public class QueryData {
 		   			List<String> sortFields,
                     List<Boolean> sortAscending,
                     List<String> groupFields,
-                    List<String> aggregateFunctions) {
-	   
+                    List<String> aggregateFunctions,
+                    boolean isDistinct) {
+
 	   if (sortFields.size() != sortAscending.size())
 	         throw new IllegalArgumentException(
 	               "Each sort field must have a sorting direction");
@@ -41,10 +45,11 @@ public class QueryData {
 	      this.fields = fields;
 	      this.tables = tables;
 	      this.pred = pred;
-	      this.sortFields = sortFields; 
+	      this.sortFields = sortFields;
 	      this.sortAscending = sortAscending; // true = ascending, false = descending
 	      this.groupFields = groupFields;
 	      this.aggregateFunctions = aggregateFunctions;
+	      this.isDistinct = isDistinct;
    }
    
    /**
@@ -110,10 +115,20 @@ public class QueryData {
    public List<Boolean> sortAscending() {
       return sortAscending;
    }
-   
+
+   /**
+    * Returns whether the query has a DISTINCT clause.
+    * @return true if duplicate rows should be removed from the output
+    */
+   public boolean isDistinct() {
+      return isDistinct;
+   }
+
    public String toString() {
       String result = "select ";
-      
+      if (isDistinct)
+         result += "distinct ";
+
       // normal fields
       for (String fldname : fields)
          result += fldname + ", ";

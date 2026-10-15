@@ -59,6 +59,13 @@ public class Parser {
 		// SELECT CLAUSE
 		lex.eatKeyword("select");
 
+		// DISTINCT CLAUSE
+		boolean isDistinct = false;
+		if (lex.matchKeyword("distinct")) {
+			lex.eatKeyword("distinct");
+			isDistinct = true;
+		}
+
 		// Extract aggregate functions for GROUP BY clause from SELECT clause
 		SelectClauseInfo selectInfo = selectListWithAggregates();
 		List<String> fields = selectInfo.fields;
@@ -93,7 +100,7 @@ public class Parser {
 			orderList(sortFields, sortAscending);
 		}
 
-		return new QueryData(fields, tables, pred, sortFields, sortAscending, groupFields, aggregateFunctions);
+		return new QueryData(fields, tables, pred, sortFields, sortAscending, groupFields, aggregateFunctions, isDistinct);
 	}
 
 //   private List<String> selectList() {
