@@ -200,7 +200,8 @@ public class Lexer {
             "create", "table", "int", "varchar", "view", "as", "index", "on",
             "using", "hash", "btree",
             "order", "by", "asc", "desc", // LAB 3, for ORDER BY clause
-            "group", "by", "min", "max", "avg", "count", "sum" // LAB 4, GROUP BY clause
+            "group", "by", "min", "max", "avg", "count", "sum", // LAB 4, GROUP BY clause
+            "distinct" // LAB 6, for DISTINCT clause
             );
    }
 }
