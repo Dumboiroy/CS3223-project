@@ -81,6 +81,12 @@ public class SimpleIJNoJDBC {
 
    private static void doQuery(Plan p) {
       try {
+    	 // Print the query Plan
+    	 // Display Query Plan
+  		 System.out.println("=== Query Execution Plan ===");
+  		 System.out.println(p.toString(0));
+  		 System.out.println("=== End of Query Execution Plan ===");
+    	  
     	 Schema sch = p.schema();
     	 // Returns display width of a given field by its field name
     	 Function<String, Integer> fldDisplayWidth = 
