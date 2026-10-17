@@ -191,12 +191,23 @@ public class Parser {
 	}
 
 	/**
-	 * Parses a single aggregate function invocation. Syntax: AGGREGATEFN(fieldname)
-	 * Supported functions: COUNT, SUM, MAX, MIN, AVG
-	 * 
-	 * @return the aggregate function string (e.g., "count(id)", "sum(salary)")
+	 * Parses a single aggregate function invocation in the SELECT clause. Syntax:
+	 * AGGREGATEFN(fieldname) Supported functions: COUNT, SUM, MAX, MIN, AVG
 	 */
 	private void parseAggregateFn(List<String> fields, List<String> aggFns) {
+		String aggFn = aggregateFnString();
+		// add the field name to the list of fields in select clause
+		fields.add(aggFn.substring(aggFn.indexOf('(') + 1, aggFn.indexOf(')')));
+		// then add the aggFns to the list of aggFns
+		aggFns.add(aggFn);
+	}
+
+	/**
+	 * Consumes AGGREGATEFN(fieldname) and returns it as a string.
+	 *
+	 * @return the aggregate function string (e.g., "count(id)", "sum(salary)")
+	 */
+	private String aggregateFnString() {
 		String fn = "";
 		if (lex.matchKeyword("count")) {
 			lex.eatKeyword("count");
@@ -218,22 +229,20 @@ public class Parser {
 		lex.eatDelim('(');
 		String fieldName = field();
 		lex.eatDelim(')');
-		// add the field name to the list of fields in select clause
-		fields.add(fieldName);
-		// then add the aggFns to the list of aggFns
-		aggFns.add(fn + "(" + fieldName + ")");
+		return fn + "(" + fieldName + ")";
 	}
 
 	/**
 	 * Parses the comma-separated list following ORDER BY
 	 *
-	 * Each item has the following form: field [ASC | DESC | null]
+	 * Each item has the following form: (field | AGGFN(field)) [ASC | DESC | null]
+	 * An aggregate item is stored as e.g. "count(id)".
 	 *
 	 * ASC is used by default when no direction is specified.
 	 */
 	private void orderList(List<String> sortFields, List<Boolean> sortAscending) {
 		while (true) {
-			String fldname = field();
+			String fldname = checkAggregateFn() ? aggregateFnString() : field();
 			boolean ascending = true;
 
 			if (lex.matchKeyword("asc")) {

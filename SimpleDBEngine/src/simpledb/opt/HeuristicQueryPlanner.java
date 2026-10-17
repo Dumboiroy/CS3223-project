@@ -50,6 +50,7 @@ public class HeuristicQueryPlanner implements QueryPlanner {
 		// Note: If a SELECT query contains aggregate functions, every non-aggregated
 		// field must be included in the GROUP BY clause.
 		List<String> projectionFields = data.fields();
+		Map<String, String> aggFieldNames = new HashMap<>(); // "count(id)" -> "countofid"
 		if (!data.aggregateFunctions().isEmpty() || !data.groupFields().isEmpty()) {
 			// ONLY_FULL_GROUP_BY: if any field is agg or groupby -> all fields must be agg
 			// or groupby
@@ -57,6 +58,8 @@ public class HeuristicQueryPlanner implements QueryPlanner {
 
 			// Create aggFns list and pass aggFns + group-by'd fields to GroupByPlan
 			List<AggregationFn> aggFns = createAggregationFunctions(data.aggregateFunctions());
+			for (int i = 0; i < aggFns.size(); i++)
+				aggFieldNames.put(data.aggregateFunctions().get(i), aggFns.get(i).fieldName());
 			currentplan = new GroupByPlan(tx, currentplan, data.groupFields(), aggFns);
 
 			if (!data.groupFields().isEmpty()) {
@@ -85,7 +88,18 @@ public class HeuristicQueryPlanner implements QueryPlanner {
 
 		// Step 7: Add sorting only when ORDER BY is present
 		if (!data.sortFields().isEmpty()) {
-			p = new SortPlan(tx, p, data.sortFields(), data.sortAscending());
+			// ORDER BY aggregate (e.g. "count(id)") sorts on the aggregate's output field
+			List<String> sortFields = new ArrayList<>();
+			for (String sortField : data.sortFields()) {
+				if (sortField.indexOf('(') < 0) {
+					sortFields.add(sortField);
+				} else if (aggFieldNames.containsKey(sortField)) {
+					sortFields.add(aggFieldNames.get(sortField));
+				} else {
+					throw new RuntimeException("ORDER BY " + sortField + " must also appear in the SELECT clause");
+				}
+			}
+			p = new SortPlan(tx, p, sortFields, data.sortAscending());
 		}
 
 		// Display Query Plan
