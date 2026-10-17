@@ -1,5 +1,7 @@
-package simpledb.plan;
+package simpledb.test;
 
+import simpledb.plan.Plan;
+import simpledb.plan.Planner;
 import simpledb.query.Scan;
 import simpledb.server.SimpleDB;
 import simpledb.tx.Transaction;
@@ -52,7 +54,7 @@ public class GroupByOrderByTest {
             "select gradyear, count(sid) " +
             "from student " +
             "group by gradyear " +
-            "order by count(sid) desc";
+            "order by countofsid desc";
 
       printQueryResult(
             "TEST 1: ORDER BY COUNT descending",
@@ -74,7 +76,7 @@ public class GroupByOrderByTest {
             "select gradyear, count(sid) " +
             "from student " +
             "group by gradyear " +
-            "order by count(sid), gradyear desc";
+            "order by countofsid, gradyear desc";
 
       printQueryResult(
             "TEST 2: Default ascending ORDER BY on COUNT with tiebreaker",
@@ -95,7 +97,7 @@ public class GroupByOrderByTest {
             "select gradyear, sum(majorid) " +
             "from student " +
             "group by gradyear " +
-            "order by sum(majorid) asc";
+            "order by sumofmajorid asc";
 
       printQueryResult(
             "TEST 3: ORDER BY SUM ascending",
@@ -116,7 +118,7 @@ public class GroupByOrderByTest {
             "select gradyear, avg(majorid) " +
             "from student " +
             "group by gradyear " +
-            "order by avg(majorid) desc";
+            "order by avgofmajorid desc";
 
       printQueryResult(
             "TEST 4: ORDER BY AVG descending",
@@ -138,7 +140,7 @@ public class GroupByOrderByTest {
             "select gradyear, max(majorid), min(majorid) " +
             "from student " +
             "group by gradyear " +
-            "order by max(majorid) desc, min(majorid) asc";
+            "order by maxofmajorid desc, minofmajorid asc";
 
       printQueryResult(
             "TEST 5: ORDER BY multiple aggregates",
@@ -158,7 +160,7 @@ public class GroupByOrderByTest {
       String query =
             "select count(sid) " +
             "from student " +
-            "order by count(sid)";
+            "order by countofsid";
 
       printQueryResult(
             "TEST 6: ORDER BY aggregate without GROUP BY",
@@ -180,7 +182,7 @@ public class GroupByOrderByTest {
             "from student " +
             "where sid = 999 " +
             "group by gradyear " +
-            "order by count(sid)";
+            "order by countofsid";
 
       printQueryResult(
             "TEST 7: Empty query result with ORDER BY aggregate",

@@ -1,7 +1,6 @@
 package simpledb.test;
 
 import java.io.File;
-import simpledb.plan.GroupByOrderByTest;
 
 /**
  * Test suite orchestrator for GROUP BY + ORDER BY (aggregate) functionality.
