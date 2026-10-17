@@ -85,6 +85,12 @@ public class HeuristicQueryPlanner implements QueryPlanner {
 
 		// Step 7: Add sorting only when ORDER BY is present
 		if (!data.sortFields().isEmpty()) {
+			// Check if all sortfields are valid
+			for (String sortField : data.sortFields()) {
+				if (!p.schema().hasField(sortField))
+					throw new RuntimeException("ORDER BY field '" + sortField
+							+ "' is not in the output of the query");
+			}
 			p = new SortPlan(tx, p, data.sortFields(), data.sortAscending());
 		}
 

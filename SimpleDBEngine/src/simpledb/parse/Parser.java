@@ -193,7 +193,7 @@ public class Parser {
 	/**
 	 * Parses a single aggregate function invocation. Syntax: AGGREGATEFN(fieldname)
 	 * Supported functions: COUNT, SUM, MAX, MIN, AVG
-	 * 
+	 *
 	 * @return the aggregate function string (e.g., "count(id)", "sum(salary)")
 	 */
 	private void parseAggregateFn(List<String> fields, List<String> aggFns) {
