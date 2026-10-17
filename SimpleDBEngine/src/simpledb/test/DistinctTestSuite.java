@@ -1,7 +1,8 @@
 package simpledb.test;
 
 import java.io.File;
-import simpledb.plan.DistinctTest;
+
+import simpledb.materialize.DistinctTest;
 
 /**
  * Test suite orchestrator for DISTINCT functionality.
