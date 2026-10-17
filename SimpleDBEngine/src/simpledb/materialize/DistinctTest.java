@@ -28,6 +28,8 @@ public class DistinctTest {
          testWithOrderBy(planner, tx);
          testEmptyResult(planner, tx);
          testDirectPlan(db, tx);
+         testCrossProductDistinct(planner, tx);
+         testDistinctWithGroupBy(planner, tx);
 
          tx.commit();
          System.out.println("\nAll DISTINCT tests completed.");
@@ -150,6 +152,38 @@ public class DistinctTest {
          throw new RuntimeException(
                "TEST 7: output schema differs from underlying schema");
       System.out.println(plan.toString(0));
+   }
+
+   /**
+    * Tests DISTINCT over a cross product. Without distinct, student x enroll
+    * gives 9 * 6 = 54 rows. With distinct on sid, only the 9 student ids remain.
+    */
+   private static void testCrossProductDistinct(Planner planner, Transaction tx) {
+      checkRowCount(
+            "TEST 8: Cross product without distinct",
+            "select sid from student, enroll", 54, planner, tx);
+
+      checkRowCount(
+            "TEST 9: Cross product with distinct",
+            "select distinct sid from student, enroll", 9, planner, tx);
+   }
+
+   /**
+    * Tests DISTINCT over grouped output with avg, max, min and sum, followed
+    * by order by on aggregate fields. The join keeps 6 rows, which group into
+    * 3 gradyears (2020, 2021, 2022), so 3 rows remain.
+    */
+   private static void testDistinctWithGroupBy(Planner planner, Transaction tx) {
+      String query =
+            "select distinct avg(sid), gradyear, max(majorid), min(eid), sum(sectionid) " +
+            "from student, enroll " +
+            "where sid = studentid " +
+            "group by gradyear " +
+            "order by sumofsectionid asc, minofeid desc";
+
+      checkRowCount(
+            "TEST 10: Distinct with group by and order by",
+            query, 3, planner, tx);
    }
 
    /**
