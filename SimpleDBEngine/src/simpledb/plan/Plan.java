@@ -45,4 +45,11 @@ public interface Plan {
     * @return the query's schema
     */
    public Schema schema();
+
+   /**
+    * Returns a string representation of the query plan tree at the specified depth.
+    * @param depth the indentation depth for formatting the tree structure
+    * @return the string representation of the plan
+    */
+   public String toString(int depth);
 }

@@ -83,4 +83,16 @@ public class SelectPlan implements Plan {
    public Schema schema() {
       return p.schema();
    }
+
+   /**
+    * Returns a string representation of this select node and its
+    * subtree, indented to the specified depth.
+    * @see simpledb.plan.Plan#toString(int)
+    */
+   public String toString(int depth) {
+      String indent = "  ".repeat(depth);
+      return indent + "SelectPlan(" + pred + ")"
+           + " [blocks: " + blocksAccessed() + ", records: " + recordsOutput() + "]\n"
+           + p.toString(depth + 1);
+   }
 }

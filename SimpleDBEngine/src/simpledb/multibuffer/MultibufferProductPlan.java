@@ -98,6 +98,18 @@ public class MultibufferProductPlan implements Plan {
       return schema;
    }
 
+   /**
+    * Returns a string representation of the plan tree at the specified depth.
+    * @see simpledb.plan.Plan#toString(int)
+    */
+   public String toString(int depth) {
+      String indent = "  ".repeat(depth);
+      return indent + "MultibufferProductPlan" +
+            " [blocks: " + blocksAccessed() + ", records: " + recordsOutput() + "]" + "\n" +
+            lhs.toString(depth + 1) +
+            rhs.toString(depth + 1);
+   }
+
    private TempTable copyRecordsFrom(Plan p) {
       Scan   src = p.open(); 
       Schema sch = p.schema();

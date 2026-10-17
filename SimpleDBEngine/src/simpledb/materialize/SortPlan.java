@@ -15,7 +15,8 @@ public class SortPlan implements Plan {
    private Plan p;
    private Schema sch;
    private RecordComparator comp;
-   
+   private List<String> sortfields;
+
    /**
     * Create a sort plan for the specified query.
     * @param p the plan for the underlying query
@@ -25,6 +26,7 @@ public class SortPlan implements Plan {
    public SortPlan(Transaction tx, Plan p, List<String> sortfields) {
       this.tx = tx;
       this.p = p;
+      this.sortfields = sortfields;
       sch = p.schema();
       comp = new RecordComparator(sortfields);
    }
@@ -52,6 +54,7 @@ public class SortPlan implements Plan {
 
       this.tx = tx;
       this.p = p;
+      this.sortfields = sortfields;
       this.sch = p.schema();
       this.comp = new RecordComparator(sortfields, sortAscending);
    }
@@ -119,7 +122,18 @@ public class SortPlan implements Plan {
    public Schema schema() {
       return sch;
    }
-   
+
+   /**
+    * Return a string representation of this plan and its subtree.
+    * @see simpledb.plan.Plan#toString(int)
+    */
+   public String toString(int depth) {
+      String indent = "  ".repeat(depth);
+      return indent + "SortPlan(" + String.join(", ", sortfields) + ")"
+            + " [blocks: " + blocksAccessed() + ", records: " + recordsOutput() + "]\n"
+            + p.toString(depth + 1);
+   }
+
    private List<TempTable> splitIntoRuns(Scan src) {
       List<TempTable> temps = new ArrayList<>();
       src.beforeFirst();

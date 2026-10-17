@@ -69,4 +69,16 @@ public class ProjectPlan implements Plan {
    public Schema schema() {
       return schema;
    }
+
+   /**
+    * Returns a string representation of this project node and its
+    * subtree, indented to the specified depth.
+    * @see simpledb.plan.Plan#toString(int)
+    */
+   public String toString(int depth) {
+      String indent = "  ".repeat(depth);
+      return indent + "ProjectPlan(" + schema.fields() + ")"
+           + " [blocks: " + blocksAccessed() + ", records: " + recordsOutput() + "]\n"
+           + p.toString(depth + 1);
+   }
 }

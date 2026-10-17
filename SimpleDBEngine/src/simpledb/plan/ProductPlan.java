@@ -76,4 +76,17 @@ public class ProductPlan implements Plan {
    public Schema schema() {
       return schema;
    }
+
+   /**
+    * Returns a string representation of this product node and its
+    * subtrees, indented to the specified depth.
+    * @see simpledb.plan.Plan#toString(int)
+    */
+   public String toString(int depth) {
+      String indent = "  ".repeat(depth);
+      return indent + "ProductPlan"
+           + " [blocks: " + blocksAccessed() + ", records: " + recordsOutput() + "]\n"
+           + p1.toString(depth + 1)
+           + p2.toString(depth + 1);
+   }
 }

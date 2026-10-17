@@ -83,6 +83,10 @@ public class HeuristicQueryPlanner implements QueryPlanner {
 			p = new SortPlan(tx, p, data.sortFields(), data.sortAscending());
 		}
 
+		// Display Query Plan
+		System.out.println("=== Query Execution Plan ===");
+		System.out.println(p.toString(0));
+		System.out.println("=== End of Query Execution Plan ===");
 		return p;
 	}
 
