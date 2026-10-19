@@ -82,15 +82,48 @@ public class Schema {
    }
    
    /**
-    * Return true if the specified field
-    * is in the schema
+    * Return true if the specified field is in the schema, resolving
+    * qualified names (e.g. "t.a") and unambiguous bare names.
     * @param fldname the name of the field
     * @return true if the field is in the schema
     */
    public boolean hasField(String fldname) {
-      return fields.contains(fldname);
+      return resolve(fldname) != null;
    }
-   
+
+   /** Return true only if the schema contains this exact field name. */
+   public boolean hasFieldExact(String fldname) {
+      return info.containsKey(fldname);
+   }
+
+   /**
+    * Resolve a (possibly qualified or bare) field reference to the actual
+    * field name stored in this schema, or null if there is no match. An exact
+    * match wins; a qualified request "t.a" also matches a bare "a"; a bare
+    * request matches a unique qualified "x.a".
+    * @param fldname the requested field name
+    * @return the stored field name, or null
+    */
+   public String resolve(String fldname) {
+      if (info.containsKey(fldname))
+         return fldname;
+      int dot = fldname.indexOf('.');
+      if (dot >= 0) {
+         String suffix = fldname.substring(dot + 1);
+         return info.containsKey(suffix) ? suffix : null;
+      }
+      String match = null;
+      for (String f : fields) {
+         int d = f.indexOf('.');
+         if (d >= 0 && f.substring(d + 1).equals(fldname)) {
+            if (match != null)
+               return null; // ambiguous bare name
+            match = f;
+         }
+      }
+      return match;
+   }
+
    /**
     * Return the type of the specified field, using the
     * constants in {@link java.sql.Types}.
@@ -98,9 +131,9 @@ public class Schema {
     * @return the integer type of the field
     */
    public int type(String fldname) {
-      return info.get(fldname).type;
+      return info.get(resolve(fldname)).type;
    }
-   
+
    /**
     * Return the conceptual length of the specified field.
     * If the field is not a string field, then
@@ -109,7 +142,7 @@ public class Schema {
     * @return the conceptual length of the field
     */
    public int length(String fldname) {
-      return info.get(fldname).length;
+      return info.get(resolve(fldname)).length;
    }
    
    class FieldInfo {

@@ -103,15 +103,31 @@ public class Term {
       if (!opr.equals("="))
          return null;
       if (lhs.isFieldName() &&
-            lhs.asFieldName().equals(fldname) &&
+            fieldMatches(lhs.asFieldName(), fldname) &&
             !rhs.isFieldName())
          return rhs.asConstant();
       else if (rhs.isFieldName() &&
-            rhs.asFieldName().equals(fldname) &&
+            fieldMatches(rhs.asFieldName(), fldname) &&
             !lhs.isFieldName())
          return lhs.asConstant();
       else
          return null;
+   }
+
+   /**
+    * Whether a field reference in a term and a target field name denote the
+    * same field, allowing a bare name to match a qualified one (and vice
+    * versa). Two differently-qualified names never match.
+    */
+   private static boolean fieldMatches(String a, String b) {
+      if (a.equals(b))
+         return true;
+      int da = a.indexOf('.'), db = b.indexOf('.');
+      if (da < 0 && db >= 0)
+         return a.equals(b.substring(db + 1));
+      if (db < 0 && da >= 0)
+         return b.equals(a.substring(da + 1));
+      return false;
    }
 
    /**
@@ -127,11 +143,11 @@ public class Term {
       if (!opr.equals("="))
          return null;
       if (lhs.isFieldName() &&
-            lhs.asFieldName().equals(fldname) &&
+            fieldMatches(lhs.asFieldName(), fldname) &&
             rhs.isFieldName())
          return rhs.asFieldName();
       else if (rhs.isFieldName() &&
-            rhs.asFieldName().equals(fldname) &&
+            fieldMatches(rhs.asFieldName(), fldname) &&
             lhs.isFieldName())
          return lhs.asFieldName();
       else
