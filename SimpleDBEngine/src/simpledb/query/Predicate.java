@@ -137,6 +137,14 @@ public class Predicate {
       return null;
    }
 
+   /** Return all field names referenced anywhere in this predicate. */
+   public List<String> fields() {
+      List<String> result = new ArrayList<>();
+      for (Term t : terms)
+         t.collectFields(result);
+      return result;
+   }
+
    public String toString() {
       Iterator<Term> iter = terms.iterator();
       if (!iter.hasNext()) 

@@ -64,7 +64,7 @@ public class SimpleDB {
       else
          qp = new HeuristicQueryPlanner(mdm);
       UpdatePlanner up = new IndexUpdatePlanner(mdm);
-      planner = new Planner(qp, up);
+      planner = new Planner(qp, up, mdm);
       tx.commit();
    }
    

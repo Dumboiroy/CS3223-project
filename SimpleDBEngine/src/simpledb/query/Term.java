@@ -165,6 +165,14 @@ public class Term {
       return lhs.appliesTo(sch) && rhs.appliesTo(sch);
    }
 
+   /** Add the field names referenced by this term to the given collection. */
+   public void collectFields(java.util.Collection<String> fields) {
+      if (lhs.isFieldName())
+         fields.add(lhs.asFieldName());
+      if (rhs.isFieldName())
+         fields.add(rhs.asFieldName());
+   }
+
    public String toString() {
       return lhs.toString() + opr + rhs.toString();
    }
