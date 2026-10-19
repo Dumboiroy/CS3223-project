@@ -1,6 +1,7 @@
 package simpledb.index.btree;
 
 import static java.sql.Types.INTEGER;
+import static java.sql.Types.DOUBLE;
 import simpledb.file.BlockId;
 import simpledb.tx.Transaction;
 import simpledb.record.*;
@@ -52,9 +53,13 @@ public class BTreeIndex implements Index {
          node.format(rootblk, 0);
          // insert initial directory entry
          int fldtype = dirsch.type("dataval");
-         Constant minval = (fldtype == INTEGER) ?
-               new Constant(Integer.MIN_VALUE) :
-               new Constant("");
+         Constant minval;
+         if (fldtype == INTEGER)
+            minval = new Constant(Integer.MIN_VALUE);
+         else if (fldtype == DOUBLE)
+            minval = new Constant(Double.NEGATIVE_INFINITY);
+         else
+            minval = new Constant("");
          node.insertDir(0, minval, 0);
          node.close();
       }

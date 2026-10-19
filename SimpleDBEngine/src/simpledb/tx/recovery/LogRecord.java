@@ -10,7 +10,7 @@ import simpledb.tx.Transaction;
 public interface LogRecord {
    static final int CHECKPOINT = 0, START = 1,
          COMMIT = 2, ROLLBACK  = 3,
-         SETINT = 4, SETSTRING = 5;
+         SETINT = 4, SETSTRING = 5, SETDOUBLE = 6;
 
    /**
     * Returns the log record's type. 
@@ -51,8 +51,10 @@ public interface LogRecord {
          return new RollbackRecord(p);
       case SETINT: 
          return new SetIntRecord(p);
-      case SETSTRING: 
+      case SETSTRING:
          return new SetStringRecord(p);
+      case SETDOUBLE:
+         return new SetDoubleRecord(p);
       default:
          return null;
       }

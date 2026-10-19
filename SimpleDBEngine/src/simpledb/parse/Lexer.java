@@ -20,7 +20,8 @@ public class Lexer {
    public Lexer(String s) {
       initKeywords();
       tok = new StreamTokenizer(new StringReader(s));
-      tok.ordinaryChar('.'); // disallow "." in identifiers
+      // '.' is left to the number parser so 3.14 reads as one token; "t.a"
+      // still splits into word '.' word since '.' is numeric only before a digit.
       tok.wordChars('_', '_'); // allow "_" in identifiers
       tok.lowerCaseMode(true); // ids and keywords are converted
       nextToken();
@@ -48,13 +49,16 @@ public class Lexer {
       return d == (char) tok.ttype;
    }
 
-   /**
-    * Returns true if the current token is an integer.
-    * 
-    * @return true if the current token is an integer
-    */
+   /** True if the current token is a numeric literal with no fractional part. */
    public boolean matchIntConstant() {
-      return tok.ttype == StreamTokenizer.TT_NUMBER;
+      return tok.ttype == StreamTokenizer.TT_NUMBER
+            && tok.nval == Math.floor(tok.nval);
+   }
+
+   /** True if the current token is a numeric literal with a fractional part (e.g. 3.14). */
+   public boolean matchDoubleConstant() {
+      return tok.ttype == StreamTokenizer.TT_NUMBER
+            && tok.nval != Math.floor(tok.nval);
    }
 
    /**
@@ -142,6 +146,15 @@ public class Lexer {
       return i;
    }
 
+   /** Return any numeric literal (int-valued or fractional) as a double. */
+   public double eatDoubleConstant() {
+      if (tok.ttype != StreamTokenizer.TT_NUMBER)
+         throw new BadSyntaxException();
+      double d = tok.nval;
+      nextToken();
+      return d;
+   }
+
    /**
     * Throws an exception if the current token is not
     * a string.
@@ -197,7 +210,7 @@ public class Lexer {
    private void initKeywords() {
       keywords = Arrays.asList("select", "from", "where", "and",
             "insert", "into", "values", "delete", "update", "set",
-            "create", "table", "int", "varchar", "view", "as", "index", "on",
+            "create", "table", "int", "double", "varchar", "view", "as", "index", "on",
             "using", "hash", "btree",
             "order", "by", "asc", "desc", // LAB 3, for ORDER BY clause
             "group", "by", "min", "max", "avg", "count", "sum", // LAB 4, GROUP BY clause

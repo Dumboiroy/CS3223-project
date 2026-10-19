@@ -36,6 +36,11 @@ public class Schema {
    public void addIntField(String fldname) {
       addField(fldname, INTEGER, 0);
    }
+
+   /** Add a double (8-byte floating point) field to the schema. */
+   public void addDoubleField(String fldname) {
+      addField(fldname, DOUBLE, 0);
+   }
    
    /**
     * Add a string field to the schema.

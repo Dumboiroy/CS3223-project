@@ -1,6 +1,7 @@
 package simpledb.record;
 
 import static java.sql.Types.INTEGER;
+import static java.sql.Types.DOUBLE;
 import simpledb.file.*;
 import simpledb.tx.Transaction;
 
@@ -43,6 +44,12 @@ public class RecordPage {
       return tx.getString(blk, fldpos);
    }
 
+   /** Return the double stored for the given field of the given slot. */
+   public double getDouble(int slot, String fldname) {
+      int fldpos = offset(slot) + layout.offset(fldname);
+      return tx.getDouble(blk, fldpos);
+   }
+
    /**
     * Store an integer at the specified field
     * of the specified slot.
@@ -64,7 +71,13 @@ public class RecordPage {
       int fldpos = offset(slot) + layout.offset(fldname);
       tx.setString(blk, fldpos, val, true);
    }
-   
+
+   /** Store a double at the given field of the given slot. */
+   public void setDouble(int slot, String fldname, double val) {
+      int fldpos = offset(slot) + layout.offset(fldname);
+      tx.setDouble(blk, fldpos, val, true);
+   }
+
    public void delete(int slot) {
       setFlag(slot, EMPTY);
    }
@@ -82,6 +95,8 @@ public class RecordPage {
             int fldpos = offset(slot) + layout.offset(fldname);
             if (sch.type(fldname) == INTEGER)
                tx.setInt(blk, fldpos, 0, false);
+            else if (sch.type(fldname) == DOUBLE)
+               tx.setDouble(blk, fldpos, 0.0, false);
             else
                tx.setString(blk, fldpos, "", false);
          }

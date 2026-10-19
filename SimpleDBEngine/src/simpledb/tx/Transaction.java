@@ -131,6 +131,13 @@ public class Transaction {
       Buffer buff = mybuffers.getBuffer(blk);
       return buff.contents().getString(offset);
    }
+
+   /** Return the double stored at the given offset of the block (after an SLock). */
+   public double getDouble(BlockId blk, int offset) {
+      concurMgr.sLock(blk);
+      Buffer buff = mybuffers.getBuffer(blk);
+      return buff.contents().getDouble(offset);
+   }
    
    /**
     * Store an integer at the specified offset 
@@ -177,6 +184,18 @@ public class Transaction {
          lsn = recoveryMgr.setString(buff, offset, val);
       Page p = buff.contents();
       p.setString(offset, val);
+      buff.setModified(txnum, lsn);
+   }
+
+   /** Store a double at the given offset, logging the old value unless okToLog is false. */
+   public void setDouble(BlockId blk, int offset, double val, boolean okToLog) {
+      concurMgr.xLock(blk);
+      Buffer buff = mybuffers.getBuffer(blk);
+      int lsn = -1;
+      if (okToLog)
+         lsn = recoveryMgr.setDouble(buff, offset, val);
+      Page p = buff.contents();
+      p.setDouble(offset, val);
       buff.setModified(txnum, lsn);
    }
 

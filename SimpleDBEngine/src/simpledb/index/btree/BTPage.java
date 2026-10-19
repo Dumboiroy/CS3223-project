@@ -1,6 +1,7 @@
 package simpledb.index.btree;
 
 import static java.sql.Types.INTEGER;
+import static java.sql.Types.DOUBLE;
 import simpledb.file.BlockId;
 import simpledb.tx.Transaction;
 import simpledb.record.*;
@@ -130,6 +131,8 @@ public class BTPage {
          int offset = layout.offset(fldname);
          if (layout.schema().type(fldname) == INTEGER)
             tx.setInt(blk, pos + offset, 0, false);
+         else if (layout.schema().type(fldname) == DOUBLE)
+            tx.setDouble(blk, pos + offset, 0.0, false);
          else
             tx.setString(blk, pos + offset, "", false);
       }
@@ -212,29 +215,43 @@ public class BTPage {
       int pos = fldpos(slot, fldname);
       return tx.getString(currentblk, pos);
    }
-   
+
+   private double getDouble(int slot, String fldname) {
+      int pos = fldpos(slot, fldname);
+      return tx.getDouble(currentblk, pos);
+   }
+
    private Constant getVal(int slot, String fldname) {
       int type = layout.schema().type(fldname);
       if (type == INTEGER)
          return new Constant(getInt(slot, fldname));
+      else if (type == DOUBLE)
+         return new Constant(getDouble(slot, fldname));
       else
          return new Constant(getString(slot, fldname));
    }
-   
+
    private void setInt(int slot, String fldname, int val) {
       int pos = fldpos(slot, fldname);
       tx.setInt(currentblk, pos, val, true);
    }
-   
+
    private void setString(int slot, String fldname, String val) {
       int pos = fldpos(slot, fldname);
       tx.setString(currentblk, pos, val, true);
    }
-   
+
+   private void setDouble(int slot, String fldname, double val) {
+      int pos = fldpos(slot, fldname);
+      tx.setDouble(currentblk, pos, val, true);
+   }
+
    private void setVal(int slot, String fldname, Constant val) {
       int type = layout.schema().type(fldname);
       if (type == INTEGER)
          setInt(slot, fldname, val.asInt());
+      else if (type == DOUBLE)
+         setDouble(slot, fldname, val.asDouble());
       else
          setString(slot, fldname, val.asString());
    }

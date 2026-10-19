@@ -2,59 +2,84 @@ package simpledb.query;
 
 /**
  * The class that denotes values stored in the database.
+ * A Constant holds an integer, a double, or a string. Int and double
+ * constants are numeric and compare/equate by promoting to double.
  * @author Edward Sciore
  */
 public class Constant implements Comparable<Constant> {
    private Integer ival = null;
    private String  sval = null;
-   
+   private Double  dval = null;
+
    public Constant(Integer ival) {
       this.ival = ival;
    }
-   
+
    public Constant(String sval) {
       this.sval = sval;
    }
-   
-   public int asInt() {
-      return ival;
+
+   public Constant(Double dval) {
+      this.dval = dval;
    }
-   
+
+   public int asInt() {
+      if (ival != null)
+         return ival;
+      if (dval != null)
+         return dval.intValue();
+      throw new RuntimeException("Constant is not numeric: " + sval);
+   }
+
    public String asString() {
       return sval;
    }
-   
 
-   /**
-    * Compares this Constant to another object for equality.
-    * Implements the standard Java equals() contract as defined in Java 8,
-    * but violates the null contract because SimpleDB does not support nulls.
-    *
-    * Returns true if and only if the other object is a Constant with the same value.
-    * Follows the equivalence relation rules:
-    * - Reflexive: x.equals(x) returns true
-    * - Symmetric: if x.equals(y) then y.equals(x)
-    * - Transitive: if x.equals(y) and y.equals(z) then x.equals(z)
-    * - Consistent: multiple invocations return the same result
-    * - Not-null-safe: for any non-null x, x.equals(null) will throw a NullPointerException.
-    *
-    * @param obj the reference object with which to compare
-    * @return true if this Constant is equal to the specified object; false otherwise
-    */
+   /** Return the value as a double, promoting an int constant if needed. */
+   public double asDouble() {
+      if (dval != null)
+         return dval;
+      if (ival != null)
+         return ival.doubleValue();
+      throw new RuntimeException("Constant is not numeric: " + sval);
+   }
+
+   /** Return true if this constant holds a numeric (int or double) value. */
+   public boolean isNumeric() {
+      return ival != null || dval != null;
+   }
+
    public boolean equals(Object obj) {
+      if (!(obj instanceof Constant))
+         return false;
       Constant c = (Constant) obj;
-      return (ival != null) ? ival.equals(c.ival) : sval.equals(c.sval);
+      if (isNumeric() && c.isNumeric())
+         return asDouble() == c.asDouble();
+      if (sval != null && c.sval != null)
+         return sval.equals(c.sval);
+      return false;
    }
-   
+
    public int compareTo(Constant c) {
-      return (ival != null) ? ival.compareTo(c.ival) : sval.compareTo(c.sval);
+      if (isNumeric() && c.isNumeric())
+         return Double.compare(asDouble(), c.asDouble());
+      if (sval != null && c.sval != null)
+         return sval.compareTo(c.sval);
+      throw new RuntimeException("Cannot compare numeric and string constants");
    }
-   
+
    public int hashCode() {
-      return (ival != null) ? ival.hashCode() : sval.hashCode();
+      // numeric constants hash on their double value so equal ints/doubles agree
+      if (isNumeric())
+         return Double.hashCode(asDouble());
+      return sval.hashCode();
    }
-   
+
    public String toString() {
-      return (ival != null) ? ival.toString() : sval.toString();
-   }   
+      if (ival != null)
+         return ival.toString();
+      if (dval != null)
+         return dval.toString();
+      return sval;
+   }
 }
