@@ -20,7 +20,13 @@ public class Parser {
 	// Methods for parsing predicates, terms, expressions, constants, and fields
 
 	public String field() {
-		return lex.eatId();
+		String id = lex.eatId();
+		// optional qualifier: "table.attr" is returned as the string "table.attr"
+		if (lex.matchDelim('.')) {
+			lex.eatDelim('.');
+			id = id + "." + lex.eatId();
+		}
+		return id;
 	}
 
 	public Constant constant() {
