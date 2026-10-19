@@ -63,6 +63,24 @@ public class Parser {
 
 	// Methods for parsing queries
 
+	/**
+	 * Parse a query possibly combined with others by set operators, e.g.
+	 * "select ... union select ... except select ...", applied left to right.
+	 */
+	public SetQueryData setQuery() {
+		SetQueryData result = new SetQueryData();
+		result.addQuery(query());
+		while (lex.matchKeyword("union") || lex.matchKeyword("intersect") || lex.matchKeyword("except")) {
+			String op;
+			if (lex.matchKeyword("union")) { lex.eatKeyword("union"); op = "union"; }
+			else if (lex.matchKeyword("intersect")) { lex.eatKeyword("intersect"); op = "intersect"; }
+			else { lex.eatKeyword("except"); op = "except"; }
+			result.addOperator(op);
+			result.addQuery(query());
+		}
+		return result;
+	}
+
 	public QueryData query() {
 		// SELECT CLAUSE
 		lex.eatKeyword("select");
