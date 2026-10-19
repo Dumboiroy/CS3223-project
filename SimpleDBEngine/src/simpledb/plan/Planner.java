@@ -1,7 +1,9 @@
 package simpledb.plan;
 
+import java.util.List;
 import simpledb.tx.Transaction;
 import simpledb.parse.*;
+import simpledb.materialize.SetOperationPlan;
 
 /**
  * The object that executes SQL statements.
@@ -24,9 +26,20 @@ public class Planner {
     */
    public Plan createQueryPlan(String qry, Transaction tx) {
       Parser parser = new Parser(qry);
-      QueryData data = parser.query();
-      verifyQuery(data);
-      return qplanner.createPlan(data, tx);
+      SetQueryData setdata = parser.setQuery();
+
+      List<QueryData> queries = setdata.queries();
+      verifyQuery(queries.get(0));
+      Plan p = qplanner.createPlan(queries.get(0), tx);
+
+      // fold in each set operation left to right
+      List<String> ops = setdata.operators();
+      for (int i = 0; i < ops.size(); i++) {
+         verifyQuery(queries.get(i + 1));
+         Plan right = qplanner.createPlan(queries.get(i + 1), tx);
+         p = new SetOperationPlan(tx, p, right, ops.get(i));
+      }
+      return p;
    }
    
    /**
