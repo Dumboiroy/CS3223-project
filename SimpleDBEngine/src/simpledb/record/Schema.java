@@ -121,8 +121,11 @@ public class Schema {
       for (String f : fields) {
          int d = f.indexOf('.');
          if (d >= 0 && f.substring(d + 1).equals(fldname)) {
-            if (match != null)
-               return null; // ambiguous bare name
+            // only genuinely different qualified fields (e.g. student.a vs
+            // dept.a) are ambiguous; a repeated identical field is the same
+            // field, which can happen if a table was registered more than once
+            if (match != null && !match.equals(f))
+               return null; // ambiguous bare name across different tables
             match = f;
          }
       }
