@@ -158,6 +158,10 @@ public class BTreeIndex implements Index {
     * @return the estimated traversal cost
     */
    public static int searchCost(int numblocks, int rpb) {
+      // clamp the inputs: log(0) is -Infinity (which casts to a large negative
+      // int, making the cost negative) and log(1) == 0 would divide by zero
+      numblocks = Math.max(numblocks, 1);
+      rpb = Math.max(rpb, 2);
       return 1 + (int)(Math.log(numblocks) / Math.log(rpb));
    }
 }
