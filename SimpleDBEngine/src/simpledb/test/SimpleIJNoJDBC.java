@@ -22,6 +22,9 @@ public class SimpleIJNoJDBC {
       System.out.println("Choose Database> ");
       String s = sc.nextLine();
       
+      // Select the Selinger optimizer (must be set before SimpleDB is constructed)
+//      System.setProperty("planner", "selinger");
+
       // Connect to DB
       SimpleDB db = new SimpleDB(s);
 
@@ -89,8 +92,8 @@ public class SimpleIJNoJDBC {
     	  
     	 Schema sch = p.schema();
     	 // Returns display width of a given field by its field name
-    	 Function<String, Integer> fldDisplayWidth = 
-    			 fldname -> (sch.type(fldname) == INTEGER) ? 6 : sch.length(fldname); 
+    	 Function<String, Integer> fldDisplayWidth =
+    			 fldname -> (sch.type(fldname) == INTEGER || sch.type(fldname) == Types.DOUBLE) ? 6 : sch.length(fldname);
     	 List<String> fields = sch.fields();
     	 // execute plan
     	 Scan s = p.open();
@@ -123,6 +126,10 @@ public class SimpleIJNoJDBC {
                if (fldtype == Types.INTEGER) {
                   int ival = s.getInt(fldname);
                   System.out.format(fmt + "d", ival);
+               }
+               else if (fldtype == Types.DOUBLE) {
+                  double dval = s.getVal(fldname).asDouble();
+                  System.out.format(fmt + "s", dval);
                }
                else {
                   String sval = s.getString(fldname);
