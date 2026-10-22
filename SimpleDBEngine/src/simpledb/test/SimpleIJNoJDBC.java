@@ -46,9 +46,14 @@ public class SimpleIJNoJDBC {
 //            	planner, transaction, query
             	String qry = userInput;
             	try {
+            		long planStart = System.nanoTime();
             		Plan p = planner.createQueryPlan(qry, tx);
+            		long execStart = System.nanoTime();
             		doQuery(p);
-            	} 
+            		long execEnd = System.nanoTime();
+            		System.out.printf("Planning time: %.3f ms%n", (execStart - planStart) / 1e6);
+            		System.out.printf("Execution time: %.3f ms%n", (execEnd - execStart) / 1e6);
+            	}
             	catch (RuntimeException e) {
             		System.out.println("Runtime Exception: " + e);
             		e.printStackTrace();
