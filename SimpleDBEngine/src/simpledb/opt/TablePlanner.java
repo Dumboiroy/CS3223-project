@@ -1,5 +1,6 @@
 package simpledb.opt;
 
+import java.util.EnumSet;
 import java.util.Map;
 import simpledb.tx.Transaction;
 import simpledb.record.*;
@@ -16,6 +17,15 @@ import simpledb.plan.*;
  * @author Edward Sciore
  */
 class TablePlanner {
+   /** The join methods the optimizer may consider. */
+   public enum JoinMethod { NESTED_LOOP, MERGE, INDEX, PARTITION }
+
+   /**
+    * The join methods currently allowed. Defaults to all of them.
+    * Set to a smaller EnumSet to restrict or force a join method.
+    */
+   public static EnumSet<JoinMethod> allowedJoins = EnumSet.allOf(JoinMethod.class);
+
    private TablePlan myplan;
    private Predicate mypred;
    private Schema myschema;
@@ -72,26 +82,30 @@ class TablePlanner {
       if (joinpred == null)
          return null;
       
-      Plan best = makeNestedLoopJoin(current, currsch);
+      Plan best = null;
+      if (allowedJoins.contains(JoinMethod.NESTED_LOOP))
+         best = makeNestedLoopJoin(current, currsch);
 
-      Plan mergeJoin = makeMergeJoin(current, currsch);
-      if (mergeJoin != null && mergeJoin.blocksAccessed() < best.blocksAccessed())
+      Plan mergeJoin = allowedJoins.contains(JoinMethod.MERGE) ? makeMergeJoin(current, currsch) : null;
+      if (mergeJoin != null && (best == null || mergeJoin.blocksAccessed() < best.blocksAccessed()))
          best = mergeJoin;
 
-      Plan indexJoin = makeIndexJoin(current, currsch);
-      if (indexJoin != null && indexJoin.blocksAccessed() < best.blocksAccessed())
+      Plan indexJoin = allowedJoins.contains(JoinMethod.INDEX) ? makeIndexJoin(current, currsch) : null;
+      if (indexJoin != null && (best == null || indexJoin.blocksAccessed() < best.blocksAccessed()))
          best = indexJoin;
-      
-      Plan partitionJoin = makePartitionBasedJoin(current, currsch);
-      if (partitionJoin != null && partitionJoin.blocksAccessed() < best.blocksAccessed())
+
+      Plan partitionJoin = allowedJoins.contains(JoinMethod.PARTITION) ? makePartitionBasedJoin(current, currsch) : null;
+      if (partitionJoin != null && (best == null || partitionJoin.blocksAccessed() < best.blocksAccessed()))
          best = partitionJoin;
-      
-      if (best == indexJoin)
+
+      if (best == null)
+         System.out.println("no allowed join method applies to " + tblname + "; falling back to product");
+      else if (best == indexJoin)
          System.out.println("index join used on " + tblname);
       else if (best == mergeJoin)
          System.out.println("merge join used on " + tblname);
-      else if (best == partitionJoin) 
-    	 System.out.println("partition join used on " + tblname);
+      else if (best == partitionJoin)
+         System.out.println("partition join used on " + tblname);
       else
          System.out.println("nested loop join used on " + tblname);
 
