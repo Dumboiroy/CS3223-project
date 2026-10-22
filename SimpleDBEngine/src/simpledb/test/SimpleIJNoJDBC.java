@@ -32,6 +32,9 @@ public class SimpleIJNoJDBC {
       Transaction tx  = db.newTx();
       Planner planner = db.planner();
 
+      // Load the qualified-name test data (emp and dept tables)
+      setupTestData(planner, tx);
+
       try {
          System.out.print("\nSQL> ");
          while (sc.hasNextLine()) {
@@ -80,6 +83,23 @@ public class SimpleIJNoJDBC {
       }
       sc.close();
       System.out.println("Goodbye.");
+   }
+
+   // Creates and populates emp(id, ename, deptid) and dept(id, dname).
+   // Each statement runs through doUpdate, so a failure (e.g. table already
+   // exists) is reported and does not stop the remaining statements.
+   private static void setupTestData(Planner planner, Transaction tx) {
+      String[] stmts = {
+         "create table emp(id int, ename varchar(10), deptid int)",
+         "create table dept(id int, dname varchar(10))",
+         "insert into emp(id, ename, deptid) values (1, 'amy', 10)",
+         "insert into emp(id, ename, deptid) values (2, 'bob', 20)",
+         "insert into emp(id, ename, deptid) values (3, 'cal', 10)",
+         "insert into dept(id, dname) values (10, 'sales')",
+         "insert into dept(id, dname) values (20, 'eng')"
+      };
+      for (String stmt : stmts)
+         doUpdate(planner, tx, stmt);
    }
 
    private static void doQuery(Plan p) {
