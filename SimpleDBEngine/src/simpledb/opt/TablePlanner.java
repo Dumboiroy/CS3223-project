@@ -31,10 +31,10 @@ class TablePlanner {
     */
    public static EnumSet<JoinMethod> allowedJoins = EnumSet.noneOf(JoinMethod.class);
    static {
-      allowedJoins.add(JoinMethod.NESTED_LOOP);
-      // allowedJoins.add(JoinMethod.MERGE);
-      // allowedJoins.add(JoinMethod.INDEX);
-      // allowedJoins.add(JoinMethod.PARTITION);
+       allowedJoins.add(JoinMethod.NESTED_LOOP);
+       allowedJoins.add(JoinMethod.MERGE);
+       allowedJoins.add(JoinMethod.INDEX);
+       allowedJoins.add(JoinMethod.PARTITION);
    }
 
    private TablePlan myplan;
