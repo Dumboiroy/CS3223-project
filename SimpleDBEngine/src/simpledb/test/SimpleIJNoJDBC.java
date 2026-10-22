@@ -23,6 +23,9 @@ public class SimpleIJNoJDBC {
       System.out.println("Choose Database> ");
       String s = sc.nextLine();
       
+      // Select the Selinger optimizer (must be set before SimpleDB is constructed)
+//      System.setProperty("planner", "selinger");
+
       // Connect to DB
       SimpleDB db = new SimpleDB(s);
 
