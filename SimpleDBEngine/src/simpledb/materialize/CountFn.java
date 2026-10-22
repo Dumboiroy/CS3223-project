@@ -1,6 +1,8 @@
 package simpledb.materialize;
 
+import static java.sql.Types.INTEGER;
 import simpledb.query.*;
+import simpledb.record.Schema;
 
 /**
  * The <i>count</i> aggregation function.
@@ -54,5 +56,9 @@ public class CountFn implements AggregationFn {
     */
    public Constant value() {
       return new Constant(count);
+   }
+
+   public int fieldType(Schema inputSchema) {
+      return INTEGER; // a count is always an integer
    }
 }

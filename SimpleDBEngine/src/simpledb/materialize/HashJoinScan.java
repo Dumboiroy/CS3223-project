@@ -14,7 +14,7 @@ import simpledb.record.*;
 public class HashJoinScan implements Scan {
 	private Scan s1, s2;
 	private String fldname1, fldname2;
-	private Schema s1Schema, s2Schema;
+	private Schema s1Schema, s2Schema, combinedSchema;
 
 	private HashMap<Constant, List<GroupValue>> s2Map;
 	private List<Map<String, Constant>> joinOutput;
@@ -38,6 +38,9 @@ public class HashJoinScan implements Scan {
 		this.fldname2 = fldname2;
 		this.s1Schema = s1Schema;
 		this.s2Schema = s2Schema;
+		this.combinedSchema = new Schema();
+		this.combinedSchema.addAll(s1Schema);
+		this.combinedSchema.addAll(s2Schema);
 
 		joinOutput = new ArrayList<>();
 		currentOutputIndex = -1;
@@ -119,14 +122,17 @@ public class HashJoinScan implements Scan {
 		if (currentOutputIndex < 0 || currentOutputIndex >= joinOutput.size()) {
 			throw new RuntimeException("No current record");
 		}
-		return joinOutput.get(currentOutputIndex).get(fldname);
+		String fld = combinedSchema.resolve(fldname);
+		if (fld == null)
+			fld = fldname;
+		return joinOutput.get(currentOutputIndex).get(fld);
 	}
 
 	/**
 	 * Return true if the specified field is in either schema.
 	 */
 	public boolean hasField(String fldname) {
-		return s1Schema.fields().contains(fldname) || s2Schema.fields().contains(fldname);
+		return combinedSchema.hasField(fldname);
 	}
 
 	/**

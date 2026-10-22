@@ -33,8 +33,14 @@ public class GroupByPlan implements Plan {
       this.aggfns = aggfns;
       for (String fldname : groupfields)
          sch.add(fldname, p.schema());
-      for (AggregationFn fn : aggfns)
-         sch.addIntField(fn.fieldName());
+      for (AggregationFn fn : aggfns) {
+         // type the aggregate's output column after the aggregated column
+         // (so e.g. sum/min/max of a double column stays a double)
+         if (fn.fieldType(p.schema()) == java.sql.Types.DOUBLE)
+            sch.addDoubleField(fn.fieldName());
+         else
+            sch.addIntField(fn.fieldName());
+      }
    }
    
    /**

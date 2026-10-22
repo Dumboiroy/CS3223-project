@@ -16,7 +16,7 @@ public class PartitionJoinScan implements Scan {
 	private Scan s1, s2;
 	private String fldname1, fldname2;
 	private Transaction tx;
-	private Schema s1Schema, s2Schema;
+	private Schema s1Schema, s2Schema, combinedSchema;
 	
 	private int numBuckets;
 
@@ -54,6 +54,9 @@ public class PartitionJoinScan implements Scan {
 		this.s2 = s2;
 		this.s1Schema = s1Schema;
 		this.s2Schema = s2Schema;
+		this.combinedSchema = new Schema();
+		this.combinedSchema.addAll(s1Schema);
+		this.combinedSchema.addAll(s2Schema);
 		this.fldname1 = fldname1;
 		this.fldname2 = fldname2;
 		
@@ -277,7 +280,10 @@ public class PartitionJoinScan implements Scan {
 		if (currentOutputIndex < 0 || currentOutputIndex >= joinOutput.size()) {
 			throw new RuntimeException("No current record");
 		}
-		return joinOutput.get(currentOutputIndex).get(fldname);
+		String fld = combinedSchema.resolve(fldname);
+		if (fld == null)
+			fld = fldname;
+		return joinOutput.get(currentOutputIndex).get(fld);
 	}
 
 	/**
@@ -286,6 +292,6 @@ public class PartitionJoinScan implements Scan {
 	 * @see simpledb.query.Scan#hasField(java.lang.String)
 	 */
 	public boolean hasField(String fldname) {
-		return s1.hasField(fldname) || s2.hasField(fldname);
+		return combinedSchema.hasField(fldname);
 	}
 }

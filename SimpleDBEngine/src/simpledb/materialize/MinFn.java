@@ -1,6 +1,7 @@
 package simpledb.materialize;
 
 import simpledb.query.*;
+import simpledb.record.Schema;
 
 /**
  * The <i>min</i> aggregation function.
@@ -52,5 +53,9 @@ public class MinFn implements AggregationFn {
     */
    public Constant value() {
       return val;
+   }
+
+   public int fieldType(Schema inputSchema) {
+      return inputSchema.type(fldname); // min keeps the column's type
    }
 }

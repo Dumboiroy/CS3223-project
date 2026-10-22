@@ -1,5 +1,6 @@
 package simpledb.test;
 import static java.sql.Types.INTEGER;
+import static java.sql.Types.DOUBLE;
 
 import java.sql.*;
 import java.util.List;
@@ -89,8 +90,9 @@ public class SimpleIJNoJDBC {
     	  
     	 Schema sch = p.schema();
     	 // Returns display width of a given field by its field name
-    	 Function<String, Integer> fldDisplayWidth = 
-    			 fldname -> (sch.type(fldname) == INTEGER) ? 6 : sch.length(fldname); 
+    	 Function<String, Integer> fldDisplayWidth =
+    			 fldname -> (sch.type(fldname) == INTEGER) ? 6
+    			          : (sch.type(fldname) == DOUBLE) ? 12 : sch.length(fldname);
     	 List<String> fields = sch.fields();
     	 // execute plan
     	 Scan s = p.open();
@@ -123,6 +125,10 @@ public class SimpleIJNoJDBC {
                if (fldtype == Types.INTEGER) {
                   int ival = s.getInt(fldname);
                   System.out.format(fmt + "d", ival);
+               }
+               else if (fldtype == Types.DOUBLE) {
+                  double dval = s.getVal(fldname).asDouble();
+                  System.out.format(fmt + "s", String.valueOf(dval));
                }
                else {
                   String sval = s.getString(fldname);

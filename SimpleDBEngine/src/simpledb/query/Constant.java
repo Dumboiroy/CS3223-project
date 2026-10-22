@@ -49,6 +49,11 @@ public class Constant implements Comparable<Constant> {
       return ival != null || dval != null;
    }
 
+   /** Return true if this constant holds a double value. */
+   public boolean isDouble() {
+      return dval != null;
+   }
+
    public boolean equals(Object obj) {
       if (!(obj instanceof Constant))
          return false;
