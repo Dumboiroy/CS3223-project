@@ -26,10 +26,16 @@ class TablePlanner {
 	   }
 
    /**
-    * The join methods currently allowed. Defaults to all of them.
-    * Set to a smaller EnumSet to restrict or force a join method.
+    * The join methods the optimizer may use. Comment out the lines below
+    * for any method you do not want to allow.
     */
-   public static EnumSet<JoinMethod> allowedJoins = EnumSet.allOf(JoinMethod.class);
+   public static EnumSet<JoinMethod> allowedJoins = EnumSet.noneOf(JoinMethod.class);
+   static {
+      allowedJoins.add(JoinMethod.NESTED_LOOP);
+      // allowedJoins.add(JoinMethod.MERGE);
+      // allowedJoins.add(JoinMethod.INDEX);
+      // allowedJoins.add(JoinMethod.PARTITION);
+   }
 
    private TablePlan myplan;
    private Predicate mypred;
