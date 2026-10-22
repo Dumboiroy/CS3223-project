@@ -33,7 +33,7 @@ public class SimpleIJNoJDBC {
       Planner planner = db.planner();
 
       // Load the qualified-name test data (emp and dept tables)
-      setupTestData(planner, tx);
+//      setupTestData(planner, tx);
 
       try {
          System.out.print("\nSQL> ");
