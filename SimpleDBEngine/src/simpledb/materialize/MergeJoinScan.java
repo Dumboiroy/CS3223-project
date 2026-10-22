@@ -45,6 +45,9 @@ public class MergeJoinScan implements Scan {
    public void beforeFirst() {
       s1.beforeFirst();
       s2.beforeFirst();
+      // forget the previous join value; next() must not reuse it, since
+      // the underlying scans no longer sit on the group it described
+      joinval = null;
    }
    
    /**
