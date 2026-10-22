@@ -81,7 +81,9 @@ public class SortScan implements Scan {
    }
 
    public boolean hasField(String fldname) {
-      return scans.get(current).hasField(fldname);
+      // schema-level check: every run has the same schema, so use the first run
+      // (this is also valid before the scan is positioned, when current is -1)
+      return scans.get(0).hasField(fldname);
    }
 
    /**

@@ -135,6 +135,9 @@ public class DistinctScan implements Scan {
     * @see simpledb.query.Scan#hasField(java.lang.String)
     */
    public boolean hasField(String fldname) {
-      return currentscan.hasField(fldname);
+      // schema-level check: both runs share a schema, so use s1 (always set).
+      // currentscan is null before the scan is positioned, which is when a
+      // parent scan routes hasField while opening the plan.
+      return s1.hasField(fldname);
    }
 }

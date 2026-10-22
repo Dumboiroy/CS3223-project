@@ -43,6 +43,10 @@ public class MergeJoinScan implements Scan {
     * @see simpledb.query.Scan#beforeFirst()
     */
    public void beforeFirst() {
+      // forget the previous join value: after repositioning the underlying
+      // scans, next() must not take the "same join value" shortcut (which
+      // returns without advancing s1), or it would read an unpositioned scan.
+      joinval = null;
       s1.beforeFirst();
       s2.beforeFirst();
    }
