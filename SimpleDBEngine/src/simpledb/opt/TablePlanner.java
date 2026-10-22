@@ -18,7 +18,12 @@ import simpledb.plan.*;
  */
 class TablePlanner {
    /** The join methods the optimizer may consider. */
-   public enum JoinMethod { NESTED_LOOP, MERGE, INDEX, PARTITION }
+   public enum JoinMethod { 
+	   NESTED_LOOP,
+	   MERGE,
+	   INDEX,
+	   PARTITION 
+	   }
 
    /**
     * The join methods currently allowed. Defaults to all of them.
