@@ -13,14 +13,19 @@ public class SelectClauseInfo {
     /** The aggregate functions extracted from the SELECT clause. */
     public final List<String> aggregateFunctions;
 
+    /** Every SELECT expression, retained in the order written by the user. */
+    public final List<String> selectItems;
+
     /**
      * Constructs a SelectClauseInfo with the given fields and aggregate functions.
      *
      * @param fields the field names from the SELECT clause
      * @param aggregateFunctions the aggregate functions from the SELECT clause
      */
-    public SelectClauseInfo(List<String> fields, List<String> aggregateFunctions) {
+    public SelectClauseInfo(List<String> fields, List<String> aggregateFunctions,
+                            List<String> selectItems) {
         this.fields = fields;
         this.aggregateFunctions = aggregateFunctions;
+        this.selectItems = selectItems;
     }
 }
