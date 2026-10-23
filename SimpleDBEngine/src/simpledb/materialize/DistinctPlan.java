@@ -153,6 +153,10 @@ public class DistinctPlan implements Plan {
       return temps;
    }
 
+   /**
+    * Merge the current runs pairwise, roughly halving their count. Each pass turns
+    * a list of sorted, duplicate-free runs into a shorter list of the same.
+    */
    private List<TempTable> doAMergeIteration(List<TempTable> runs) {
       List<TempTable> result = new ArrayList<>();
       while (runs.size() > 1) {
@@ -206,6 +210,9 @@ public class DistinctPlan implements Plan {
       return result;
    }
 
+   /**
+    * Copy the current record of src into a new slot of dest.
+    */
    private void write(Scan src, UpdateScan dest) {
       dest.insert();
       for (String fldname : sch.fields())
