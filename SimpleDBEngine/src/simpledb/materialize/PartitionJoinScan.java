@@ -244,6 +244,10 @@ public class PartitionJoinScan implements Scan {
 		}
 	}
 
+	/**
+	 * Return the bucket number for a join-key value (non-negative hash modulo the
+	 * bucket count).
+	 */
 	private int getBucket(Constant key) {
 		return (key.hashCode() & 0x7fffffff) % this.numBuckets;
 	}
