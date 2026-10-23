@@ -94,6 +94,7 @@ public class Parser {
 		SelectClauseInfo selectInfo = selectListWithAggregates();
 		List<String> fields = selectInfo.fields;
 		List<String> aggregateFunctions = selectInfo.aggregateFunctions;
+		List<String> selectItems = selectInfo.selectItems;
 
 		// FROM CLAUSE
 		lex.eatKeyword("from");
@@ -124,7 +125,8 @@ public class Parser {
 			orderList(sortFields, sortAscending);
 		}
 
-		return new QueryData(fields, tables, pred, sortFields, sortAscending, groupFields, aggregateFunctions, isDistinct);
+		return new QueryData(fields, tables, pred, sortFields, sortAscending, groupFields,
+				aggregateFunctions, selectItems, isDistinct);
 	}
 
 //   private List<String> selectList() {
@@ -149,16 +151,19 @@ public class Parser {
 	private SelectClauseInfo selectListWithAggregates() {
 		List<String> fields = new ArrayList<String>();
 		List<String> aggregateFunctions = new ArrayList<String>();
+		List<String> selectItems = new ArrayList<String>();
 
 		while (true) {
 			if (checkAggregateFn()) {
 				// Parse aggregate function
-				parseAggregateFn(fields, aggregateFunctions);
+				String aggregate = parseAggregateFn(fields, aggregateFunctions);
+				selectItems.add(aggregate);
 				// fields now has ALL fields in SELECT clause, aggFns has the aggFns.
 			} else {
 				// Parse regular field
 				String fieldName = field();
 				fields.add(fieldName);
+				selectItems.add(fieldName);
 			}
 
 			// Check for comma to continue
@@ -168,7 +173,7 @@ public class Parser {
 			lex.eatDelim(',');
 		}
 
-		return new SelectClauseInfo(fields, aggregateFunctions);
+		return new SelectClauseInfo(fields, aggregateFunctions, selectItems);
 	}
 
 	private Collection<String> tableList() {
@@ -220,7 +225,7 @@ public class Parser {
 	 *
 	 * @return the aggregate function string (e.g., "count(id)", "sum(salary)")
 	 */
-	private void parseAggregateFn(List<String> fields, List<String> aggFns) {
+	private String parseAggregateFn(List<String> fields, List<String> aggFns) {
 		String fn = "";
 		if (lex.matchKeyword("count")) {
 			lex.eatKeyword("count");
@@ -245,7 +250,9 @@ public class Parser {
 		// add the field name to the list of fields in select clause
 		fields.add(fieldName);
 		// then add the aggFns to the list of aggFns
-		aggFns.add(fn + "(" + fieldName + ")");
+		String aggregate = fn + "(" + fieldName + ")";
+		aggFns.add(aggregate);
+		return aggregate;
 	}
 
 	/**

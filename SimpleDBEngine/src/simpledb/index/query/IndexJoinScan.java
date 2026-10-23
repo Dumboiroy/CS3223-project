@@ -17,6 +17,7 @@ public class IndexJoinScan implements Scan {
    private Index idx;
    private String joinfield;
    private TableScan rhs;  
+   private boolean hasOuter;
    
    /**
     * Creates an index join scan for the specified LHS scan and 
@@ -43,8 +44,9 @@ public class IndexJoinScan implements Scan {
     */
    public void beforeFirst() {
       lhs.beforeFirst();
-      lhs.next();
-      resetIndex();
+      hasOuter = lhs.next();
+      if (hasOuter)
+         resetIndex();
    }
    
    /**
@@ -56,12 +58,15 @@ public class IndexJoinScan implements Scan {
     * @see simpledb.query.Scan#next()
     */
    public boolean next() {
+      if (!hasOuter)
+         return false;
       while (true) {
          if (idx.next()) {
             rhs.moveToRid(idx.getDataRid());
             return true;
          }
-         if (!lhs.next())
+         hasOuter = lhs.next();
+         if (!hasOuter)
             return false;
          resetIndex();
       }

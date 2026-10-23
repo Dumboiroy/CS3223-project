@@ -46,53 +46,35 @@ public class HeuristicQueryPlanner implements QueryPlanner {
 				currentplan = getLowestProductPlan(currentplan);
 		}
 
-		// Step 4: Create Projection Fields
-		// Note: If a SELECT query contains aggregate functions, every non-aggregated
-		// field must be included in the GROUP BY clause.
-		List<String> projectionFields = data.fields();
+		// Keep the SELECT column order, including interleaved aggregate expressions.
+		List<String> projectionFields = data.outputFields();
 		if (!data.aggregateFunctions().isEmpty() || !data.groupFields().isEmpty()) {
-			// ONLY_FULL_GROUP_BY: if any field is agg or groupby -> all fields must be agg
-			// or groupby
-			checkAllAggregated(data.fields(), data.aggregateFunctions(), data.groupFields());
-
-			// Create aggFns list and pass aggFns + group-by'd fields to GroupByPlan
+			checkGroupedFields(data.unaggregatedFields(), data.groupFields());
 			List<AggregationFn> aggFns = createAggregationFunctions(data.aggregateFunctions());
 			currentplan = new GroupByPlan(tx, currentplan, data.groupFields(), aggFns);
-
-			if (!data.groupFields().isEmpty()) {
-				// With grouped fields: project on grouped fields + aggregate result field names
-				projectionFields = new ArrayList<>(data.groupFields());
-				for (AggregationFn fn : aggFns) {
-					projectionFields.add(fn.fieldName());
-				}
-			} else {
-				// No Grouped Fields: project on aggregate result field names, implicit one big
-				// group
-				projectionFields = new ArrayList<>();
-				for (AggregationFn fn : aggFns) {
-					projectionFields.add(fn.fieldName());
-				}
-			}
 		}
 
-		// Step 5: Project on the field names
-		Plan p = new ProjectPlan(currentplan, projectionFields);
-
-		// Step 6: Remove duplicate rows only when DISTINCT is present
-		if (data.isDistinct()) {
-			p = new DistinctPlan(tx, p, projectionFields);
-		}
-
-		// Step 7: Add sorting only when ORDER BY is present
-		if (!data.sortFields().isEmpty()) {
-			// Check if all sortfields are valid
-			for (String sortField : data.sortFields()) {
-				if (!p.schema().hasField(sortField))
+		// A grouping key may order the result without becoming an output column.
+		boolean sortBeforeProjection = false;
+		for (String sortField : data.sortFields()) {
+			if (!currentplan.schema().hasField(sortField))
+				throw new RuntimeException("ORDER BY field '" + sortField
+						+ "' is not in the output of the query");
+			if (!projectionFields.contains(sortField)) {
+				if (data.isDistinct())
 					throw new RuntimeException("ORDER BY field '" + sortField
-							+ "' is not in the output of the query");
+							+ "' must be selected when DISTINCT is used");
+				sortBeforeProjection = true;
 			}
-			p = new SortPlan(tx, p, data.sortFields(), data.sortAscending());
 		}
+		if (sortBeforeProjection)
+			currentplan = new SortPlan(tx, currentplan, data.sortFields(), data.sortAscending());
+
+		Plan p = new ProjectPlan(currentplan, projectionFields);
+		if (data.isDistinct())
+			p = new DistinctPlan(tx, p, projectionFields);
+		if (!data.sortFields().isEmpty() && !sortBeforeProjection)
+			p = new SortPlan(tx, p, data.sortFields(), data.sortAscending());
 
 		return p;
 	}
@@ -171,51 +153,12 @@ public class HeuristicQueryPlanner implements QueryPlanner {
 		return functions;
 	}
 
-	/**
-	 * Checks if all fields in the provided list have a corresponding aggregated
-	 * function or are included in the group fields. A field is considered valid if
-	 * its name appears within one of the aggregated function strings OR is present
-	 * in the group fields list.
-	 *
-	 * @param fields      a list of field names to check
-	 * @param aggFields   a list of aggregated function strings (e.g.,
-	 *                    "COUNT(fieldName)", "SUM(fieldName)")
-	 * @param groupFields a list of grouped field names
-	 * @throws RuntimeException if any field is not found in either aggFields or
-	 *                          groupFields
-	 */
-	private void checkAllAggregated(List<String> fields, List<String> aggFields, List<String> groupFields)
-			throws RuntimeException {
-		for (String field : fields) {
-			boolean found = false;
-			// Check if field is in groupFields
-			for (String groupField : groupFields) {
-				if (groupField.equals(field)) {
-					found = true;
-					break;
-				}
-			}
-			// Check if field matches the argument of any aggregate function
-			if (!found) {
-				for (String aggField : aggFields) {
-					int openParen = aggField.indexOf('(');
-					int closeParen = aggField.indexOf(')');
-					if (openParen != -1 && closeParen != -1 && closeParen > openParen) {
-						// this is definitely an aggregate field
-						String aggArgField = aggField.substring(openParen + 1, closeParen).trim();
-						// compare exact aggregated field name
-						if (aggArgField.equals(field)) {
-							found = true;
-							break;
-						}
-					}
-				}
-			}
-			if (!found) {
+	/** Every plain SELECT field in an aggregate query must be a grouping key. */
+	private void checkGroupedFields(List<String> fields, List<String> groupFields) {
+		for (String field : fields)
+			if (!groupFields.contains(field))
 				throw new RuntimeException(
 						"Field '" + field + "' must be either aggregated or included in GROUP BY clause");
-			}
-		}
 	}
 
 	public void setPlanner(Planner p) {

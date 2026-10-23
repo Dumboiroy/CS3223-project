@@ -10,6 +10,7 @@ package simpledb.query;
 public class NestedLoopJoinScan implements Scan {
    private Scan s1, s2;
    private Predicate joinpred;
+   private boolean hasOuter;
 
    /**
     * Create a nested-loops join scan for the two underlying scans,
@@ -34,7 +35,7 @@ public class NestedLoopJoinScan implements Scan {
     */
    public void beforeFirst() {
       s1.beforeFirst();
-      s1.next();
+      hasOuter = s1.next();
       s2.beforeFirst();
    }
 
@@ -47,13 +48,16 @@ public class NestedLoopJoinScan implements Scan {
     * @see simpledb.query.Scan#next()
     */
    public boolean next() {
+      if (!hasOuter)
+         return false;
       while (true) {
          while (s2.next()) {
             if (joinpred.isSatisfied(this))
                return true;
          }
          s2.beforeFirst();
-         if (!s1.next())
+         hasOuter = s1.next();
+         if (!hasOuter)
             return false;
       }
    }

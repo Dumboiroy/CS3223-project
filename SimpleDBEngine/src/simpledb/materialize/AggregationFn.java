@@ -22,6 +22,15 @@ public interface AggregationFn {
     * @param s the scan to aggregate over.
     */
    void processNext(Scan s);
+
+   /**
+    * Initialize the function for an empty global group.
+    * Aggregates whose SQL result would be NULL are unsupported because
+    * SimpleDB has no NULL value representation.
+    */
+   default void processEmpty() {
+      throw new RuntimeException("empty aggregate result requires unsupported NULL value");
+   }
    
    /**
     * Return the name of the new aggregation field.

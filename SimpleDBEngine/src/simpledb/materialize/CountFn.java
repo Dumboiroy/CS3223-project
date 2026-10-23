@@ -39,6 +39,11 @@ public class CountFn implements AggregationFn {
    public void processNext(Scan s) {
       count++;
    }
+
+   /** Initialize COUNT for an empty global group. */
+   public void processEmpty() {
+      count = 0;
+   }
    
    /**
     * Return the field's name, prepended by "countof".

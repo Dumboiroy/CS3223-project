@@ -16,6 +16,7 @@ public class QueryData {
    // fields used for GROUP BY 
    private List<String> groupFields;
    private List<String> aggregateFunctions;
+   private List<String> selectItems;
    
    // fields used for ORDER BY clause
    private List<String> sortFields;
@@ -36,6 +37,7 @@ public class QueryData {
                     List<Boolean> sortAscending,
                     List<String> groupFields,
                     List<String> aggregateFunctions,
+                    List<String> selectItems,
                     boolean isDistinct) {
 
 	   if (sortFields.size() != sortAscending.size())
@@ -49,6 +51,7 @@ public class QueryData {
 	      this.sortAscending = sortAscending; // true = ascending, false = descending
 	      this.groupFields = groupFields;
 	      this.aggregateFunctions = aggregateFunctions;
+	      this.selectItems = selectItems;
 	      this.isDistinct = isDistinct;
    }
    
@@ -94,6 +97,34 @@ public class QueryData {
       return aggregateFunctions;
    }
 
+   /**
+    * Returns output field names in the same order as the SELECT expressions.
+    */
+   public List<String> outputFields() {
+      List<String> output = new ArrayList<String>();
+      for (String item : selectItems) {
+         int openParen = item.indexOf('(');
+         int closeParen = item.lastIndexOf(')');
+         if (openParen > 0 && closeParen > openParen) {
+            String function = item.substring(0, openParen);
+            String argument = item.substring(openParen + 1, closeParen);
+            output.add(function + "of" + argument);
+         }
+         else
+            output.add(item);
+      }
+      return output;
+   }
+
+   /** Returns only SELECT fields that are not inside aggregate expressions. */
+   public List<String> unaggregatedFields() {
+      List<String> result = new ArrayList<String>();
+      for (String item : selectItems)
+         if (item.indexOf('(') < 0)
+            result.add(item);
+      return result;
+   }
+
 
    
    /**
@@ -129,15 +160,11 @@ public class QueryData {
       if (isDistinct)
          result += "distinct ";
 
-      // normal fields
-      for (String fldname : fields)
-         result += fldname + ", ";
-      result = result.substring(0, result.length()-2); //remove final comma
-      
-      // aggregate functions
-      for (String aggFn : aggregateFunctions)
-          result += aggFn + ", ";
-       result = result.substring(0, result.length()-2); //remove final comma
+      for (int i = 0; i < selectItems.size(); i++) {
+         if (i > 0)
+            result += ", ";
+         result += selectItems.get(i);
+      }
       
       // tables
       result += " from ";
