@@ -159,6 +159,10 @@ class TablePlanner {
       return null;
    }
    
+   /**
+    * Build a merge join if an equality predicate links this table to the current
+    * plan, otherwise return null.
+    */
    private Plan makeMergeJoin(Plan current, Schema currsch) {
       for (String fldname : myschema.fields()) {
          String outerfield = mypred.equatesWithField(fldname);
@@ -171,6 +175,10 @@ class TablePlanner {
       return null;
    }
    
+   /**
+    * Build a partition-based (hash) join if an equality predicate links this table
+    * to the current plan and the join-field types match, otherwise return null.
+    */
    private Plan makePartitionBasedJoin(Plan current, Schema currsch) {
 	   // Try each field in current table's schema
 	   for (String fldname : myschema.fields()) {
@@ -190,6 +198,10 @@ class TablePlanner {
 	}
 
 
+   /**
+    * Build a nested-loop join of the current plan with this table (always
+    * applicable; handles non-equality join conditions too).
+    */
    private Plan makeNestedLoopJoin(Plan current, Schema currsch) {
       Predicate joinpred = mypred.joinSubPred(currsch, myschema);
       Plan p = addSelectPred(myplan);
