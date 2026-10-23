@@ -37,14 +37,14 @@ class StatMgr {
     */
    public synchronized StatInfo getStatInfo(String tblname, 
                               Layout layout, Transaction tx) {
-      numcalls++;
-      if (numcalls > 100)
-         refreshStatistics(tx);
-      StatInfo si = tablestats.get(tblname);
-      if (si == null) {
-         si = calcTableStats(tblname, layout, tx);
-         tablestats.put(tblname, si);
-      }
+      // Always compute fresh statistics. The original SimpleDB cached them and
+      // only refreshed every 100 calls, which meant stats computed while a table
+      // was still empty (e.g. during its first insert) stayed 0 for the rest of
+      // the session; the optimizer then saw 0 records and could not compare join
+      // costs. For the database sizes used here a fresh scan is cheap, and it
+      // keeps the plan's estimates and the optimizer's join choice correct.
+      StatInfo si = calcTableStats(tblname, layout, tx);
+      tablestats.put(tblname, si);
       return si;
    }
    
