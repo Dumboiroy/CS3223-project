@@ -21,6 +21,13 @@ public class SetOperationPlan implements Plan {
    private Schema sch;
    private List<String> leftFields, rightFields;
 
+   /**
+    * Create a set-operation plan over two union-compatible inputs.
+    * @param tx the calling transaction
+    * @param p1 the left input plan
+    * @param p2 the right input plan
+    * @param op the operator: UNION, INTERSECT or EXCEPT
+    */
    public SetOperationPlan(Transaction tx, Plan p1, Plan p2, String op) {
       this.tx = tx;
       this.p1 = p1;
@@ -34,6 +41,11 @@ public class SetOperationPlan implements Plan {
                + leftFields.size() + " vs " + rightFields.size() + " columns");
    }
 
+   /**
+    * Read both inputs into sets of value tuples and combine them per the
+    * operator (set semantics), returning a scan over the result.
+    * @see simpledb.plan.Plan#open()
+    */
    public Scan open() {
       // Positional read: each right row is reordered to the left's column order.
       Set<List<Constant>> left = readRows(p1.open(), leftFields);
@@ -57,6 +69,10 @@ public class SetOperationPlan implements Plan {
       return new SetOperationScan(result, leftFields, sch);
    }
 
+   /**
+    * Read a scan fully into a set of value tuples (one Constant per field, in
+    * the given field order), eliminating duplicates.
+    */
    private Set<List<Constant>> readRows(Scan s, List<String> fields) {
       // LinkedHashSet dedups while keeping first-seen order.
       Set<List<Constant>> rows = new LinkedHashSet<>();
@@ -71,10 +87,19 @@ public class SetOperationPlan implements Plan {
       return rows;
    }
 
+   /**
+    * Estimate the block cost as the sum of both inputs.
+    * @see simpledb.plan.Plan#blocksAccessed()
+    */
    public int blocksAccessed() {
       return p1.blocksAccessed() + p2.blocksAccessed();
    }
 
+   /**
+    * Estimate the output size: UNION sums both inputs, while INTERSECT and
+    * EXCEPT cannot exceed the left input.
+    * @see simpledb.plan.Plan#recordsOutput()
+    */
    public int recordsOutput() {
       // upper bounds: union adds, intersect/except cannot exceed the left side
       if (op.equals(UNION))
@@ -82,14 +107,26 @@ public class SetOperationPlan implements Plan {
       return p1.recordsOutput();
    }
 
+   /**
+    * Estimate the distinct values of a field, taken from the left input.
+    * @see simpledb.plan.Plan#distinctValues(java.lang.String)
+    */
    public int distinctValues(String fldname) {
       return p1.distinctValues(fldname);
    }
 
+   /**
+    * Return the output schema (the left operand's schema).
+    * @see simpledb.plan.Plan#schema()
+    */
    public Schema schema() {
       return sch;
    }
 
+   /**
+    * Return this plan as an indented line followed by its two child plans.
+    * @see simpledb.plan.Plan#toString(int)
+    */
    public String toString(int depth) {
       String indent = "  ".repeat(depth);
       return indent + "SetOperationPlan(" + op + ")"
