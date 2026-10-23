@@ -1,5 +1,6 @@
 package simpledb.opt;
 
+import java.util.EnumSet;
 import java.util.Map;
 import simpledb.tx.Transaction;
 import simpledb.record.*;
@@ -16,6 +17,26 @@ import simpledb.plan.*;
  * @author Edward Sciore
  */
 class TablePlanner {
+   /** The join methods the optimizer may consider. */
+   public enum JoinMethod { 
+	   NESTED_LOOP,
+	   MERGE,
+	   INDEX,
+	   PARTITION 
+	   }
+
+   /**
+    * The join methods the optimizer may use. Comment out the lines below
+    * for any method you do not want to allow.
+    */
+   public static EnumSet<JoinMethod> allowedJoins = EnumSet.noneOf(JoinMethod.class);
+   static {
+       allowedJoins.add(JoinMethod.NESTED_LOOP);
+       allowedJoins.add(JoinMethod.MERGE);
+       allowedJoins.add(JoinMethod.INDEX);
+       allowedJoins.add(JoinMethod.PARTITION);
+   }
+
    private TablePlan myplan;
    private Predicate mypred;
    private Schema myschema;
@@ -72,26 +93,30 @@ class TablePlanner {
       if (joinpred == null)
          return null;
       
-      Plan best = makeNestedLoopJoin(current, currsch);
+      Plan best = null;
+      if (allowedJoins.contains(JoinMethod.NESTED_LOOP))
+         best = makeNestedLoopJoin(current, currsch);
 
-      Plan mergeJoin = makeMergeJoin(current, currsch);
-      if (mergeJoin != null && mergeJoin.blocksAccessed() < best.blocksAccessed())
+      Plan mergeJoin = allowedJoins.contains(JoinMethod.MERGE) ? makeMergeJoin(current, currsch) : null;
+      if (mergeJoin != null && (best == null || mergeJoin.blocksAccessed() < best.blocksAccessed()))
          best = mergeJoin;
 
-      Plan indexJoin = makeIndexJoin(current, currsch);
-      if (indexJoin != null && indexJoin.blocksAccessed() < best.blocksAccessed())
+      Plan indexJoin = allowedJoins.contains(JoinMethod.INDEX) ? makeIndexJoin(current, currsch) : null;
+      if (indexJoin != null && (best == null || indexJoin.blocksAccessed() < best.blocksAccessed()))
          best = indexJoin;
-      
-      Plan partitionJoin = makePartitionBasedJoin(current, currsch);
-      if (partitionJoin != null && partitionJoin.blocksAccessed() < best.blocksAccessed())
+
+      Plan partitionJoin = allowedJoins.contains(JoinMethod.PARTITION) ? makePartitionBasedJoin(current, currsch) : null;
+      if (partitionJoin != null && (best == null || partitionJoin.blocksAccessed() < best.blocksAccessed()))
          best = partitionJoin;
-      
-      if (best == indexJoin)
+
+      if (best == null)
+         System.out.println("no allowed join method applies to " + tblname + "; falling back to product");
+      else if (best == indexJoin)
          System.out.println("index join used on " + tblname);
       else if (best == mergeJoin)
          System.out.println("merge join used on " + tblname);
-      else if (best == partitionJoin) 
-    	 System.out.println("partition join used on " + tblname);
+      else if (best == partitionJoin)
+         System.out.println("partition join used on " + tblname);
       else
          System.out.println("nested loop join used on " + tblname);
 
@@ -134,6 +159,10 @@ class TablePlanner {
       return null;
    }
    
+   /**
+    * Build a merge join if an equality predicate links this table to the current
+    * plan, otherwise return null.
+    */
    private Plan makeMergeJoin(Plan current, Schema currsch) {
       for (String fldname : myschema.fields()) {
          String outerfield = mypred.equatesWithField(fldname);
@@ -146,6 +175,10 @@ class TablePlanner {
       return null;
    }
    
+   /**
+    * Build a partition-based (hash) join if an equality predicate links this table
+    * to the current plan and the join-field types match, otherwise return null.
+    */
    private Plan makePartitionBasedJoin(Plan current, Schema currsch) {
 	   // Try each field in current table's schema
 	   for (String fldname : myschema.fields()) {
@@ -165,6 +198,10 @@ class TablePlanner {
 	}
 
 
+   /**
+    * Build a nested-loop join of the current plan with this table (always
+    * applicable; handles non-equality join conditions too).
+    */
    private Plan makeNestedLoopJoin(Plan current, Schema currsch) {
       Predicate joinpred = mypred.joinSubPred(currsch, myschema);
       Plan p = addSelectPred(myplan);

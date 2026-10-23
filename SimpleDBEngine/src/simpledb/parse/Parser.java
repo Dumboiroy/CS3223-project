@@ -20,7 +20,13 @@ public class Parser {
 	// Methods for parsing predicates, terms, expressions, constants, and fields
 
 	public String field() {
-		return lex.eatId();
+		String id = lex.eatId();
+		// optional qualifier: "table.attr" is returned as the string "table.attr"
+		if (lex.matchDelim('.')) {
+			lex.eatDelim('.');
+			id = id + "." + lex.eatId();
+		}
+		return id;
 	}
 
 	public Constant constant() {
@@ -54,6 +60,24 @@ public class Parser {
 	}
 
 	// Methods for parsing queries
+
+	/**
+	 * Parse a query possibly combined with others by set operators, e.g.
+	 * "select ... union select ... except select ...", applied left to right.
+	 */
+	public SetQueryData setQuery() {
+		SetQueryData result = new SetQueryData();
+		result.addQuery(query());
+		while (lex.matchKeyword("union") || lex.matchKeyword("intersect") || lex.matchKeyword("except")) {
+			String op;
+			if (lex.matchKeyword("union")) { lex.eatKeyword("union"); op = "union"; }
+			else if (lex.matchKeyword("intersect")) { lex.eatKeyword("intersect"); op = "intersect"; }
+			else { lex.eatKeyword("except"); op = "except"; }
+			result.addOperator(op);
+			result.addQuery(query());
+		}
+		return result;
+	}
 
 	public QueryData query() {
 		// SELECT CLAUSE

@@ -15,11 +15,13 @@ public class TableScan implements UpdateScan {
    private Layout layout;
    private RecordPage rp;
    private String filename;
+   private String tblname;
    private int currentslot;
 
    public TableScan(Transaction tx, String tblname, Layout layout) {
       this.tx = tx;
       this.layout = layout;
+      this.tblname = tblname;
       filename = tblname + ".tbl";
       if (tx.size(filename) == 0)
          moveToNewBlock();
@@ -45,22 +47,45 @@ public class TableScan implements UpdateScan {
    }
 
    public int getInt(String fldname) {
-      return rp.getInt(currentslot, fldname);
+      return rp.getInt(currentslot, actualField(fldname));
    }
 
    public String getString(String fldname) {
-      return rp.getString(currentslot, fldname);
+      return rp.getString(currentslot, actualField(fldname));
    }
 
    public Constant getVal(String fldname) {
-      if (layout.schema().type(fldname) == INTEGER)
-         return new Constant(getInt(fldname));
+      String fld = actualField(fldname);
+      if (layout.schema().type(fld) == INTEGER)
+         return new Constant(rp.getInt(currentslot, fld));
       else
-         return new Constant(getString(fldname));
+         return new Constant(rp.getString(currentslot, fld));
    }
 
    public boolean hasField(String fldname) {
-      return layout.schema().hasField(fldname);
+      return actualField(fldname) != null;
+   }
+
+   /**
+    * Translate a possibly qualified field reference to the field name stored
+    * in this scan's layout, or null if it does not apply here. A reference
+    * "t.a" matches only when t is this scan's table (base-table case) or when
+    * the layout stores that exact qualified name (temp-table case); a bare
+    * name resolves against the layout.
+    */
+   private String actualField(String fldname) {
+      Schema sch = layout.schema();
+      if (sch.hasFieldExact(fldname))
+         return fldname;
+      int dot = fldname.indexOf('.');
+      if (dot >= 0) {
+         String prefix = fldname.substring(0, dot);
+         String suffix = fldname.substring(dot + 1);
+         if (prefix.equals(tblname) && sch.hasFieldExact(suffix))
+            return suffix;
+         return null;
+      }
+      return sch.resolve(fldname);
    }
 
    public void close() {
@@ -71,11 +96,11 @@ public class TableScan implements UpdateScan {
    // Methods that implement UpdateScan
 
    public void setInt(String fldname, int val) {
-      rp.setInt(currentslot, fldname, val);
+      rp.setInt(currentslot, actualField(fldname), val);
    }
-   
+
    public void setString(String fldname, String val) {
-      rp.setString(currentslot, fldname, val);
+      rp.setString(currentslot, actualField(fldname), val);
    }
 
    public void setVal(String fldname, Constant val) {

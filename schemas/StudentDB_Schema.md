@@ -17,7 +17,9 @@ Created by: `CreateStudentDB.java`
 | 8   | pat   | 20      | 2019     |
 | 9   | lee   | 10      | 2021     |
 
-**Indexes:** `idx_majorid` (hash index on MajorId)
+**Indexes:**
+- `idx_majorid` (hash index on MajorId)
+- `idx_sid` (btree index on SId)
 
 ### DEPT
 | DId | DName    |

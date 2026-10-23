@@ -17,7 +17,7 @@ import simpledb.opt.HeuristicQueryPlanner;
  */
 public class SimpleDB {
    public static int BLOCK_SIZE = 400;
-   public static int BUFFER_SIZE = 8;
+   public static int BUFFER_SIZE = 12;
    public static String LOG_FILE = "simpledb.log";
 
    private  FileMgr     fm;
@@ -59,7 +59,7 @@ public class SimpleDB {
       // UpdatePlanner up = new BasicUpdatePlanner(mdm);
       QueryPlanner qp = new HeuristicQueryPlanner(mdm);
       UpdatePlanner up = new IndexUpdatePlanner(mdm);
-      planner = new Planner(qp, up);
+      planner = new Planner(qp, up, mdm);
       tx.commit();
    }
    

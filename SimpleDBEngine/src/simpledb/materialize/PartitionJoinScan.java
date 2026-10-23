@@ -16,8 +16,8 @@ public class PartitionJoinScan implements Scan {
 	private Scan s1, s2;
 	private String fldname1, fldname2;
 	private Transaction tx;
-	private Schema s1Schema, s2Schema;
-	
+	private Schema s1Schema, s2Schema, combinedSchema;
+
 	private int numBuckets;
 
 	// Partitions: hashkey -> bucket(TempTable - stored on disk)
@@ -54,9 +54,12 @@ public class PartitionJoinScan implements Scan {
 		this.s2 = s2;
 		this.s1Schema = s1Schema;
 		this.s2Schema = s2Schema;
+		this.combinedSchema = new Schema();
+		this.combinedSchema.addAll(s1Schema);
+		this.combinedSchema.addAll(s2Schema);
 		this.fldname1 = fldname1;
 		this.fldname2 = fldname2;
-		
+
 		if (numBuckets <= 0) {
 			throw new IllegalArgumentException("Number of buckets must be > 0.");
 		}
@@ -241,6 +244,10 @@ public class PartitionJoinScan implements Scan {
 		}
 	}
 
+	/**
+	 * Return the bucket number for a join-key value (non-negative hash modulo the
+	 * bucket count).
+	 */
 	private int getBucket(Constant key) {
 		return (key.hashCode() & 0x7fffffff) % this.numBuckets;
 	}
@@ -277,15 +284,20 @@ public class PartitionJoinScan implements Scan {
 		if (currentOutputIndex < 0 || currentOutputIndex >= joinOutput.size()) {
 			throw new RuntimeException("No current record");
 		}
-		return joinOutput.get(currentOutputIndex).get(fldname);
+		// the output map is keyed by the stored (possibly qualified) field
+		// names; resolve a bare/qualified reference to that key first
+		String fld = combinedSchema.resolve(fldname);
+		if (fld == null)
+			fld = fldname;
+		return joinOutput.get(currentOutputIndex).get(fld);
 	}
 
 	/**
 	 * Return true if the specified field is in either of the underlying scans.
-	 * 
+	 *
 	 * @see simpledb.query.Scan#hasField(java.lang.String)
 	 */
 	public boolean hasField(String fldname) {
-		return s1.hasField(fldname) || s2.hasField(fldname);
+		return combinedSchema.hasField(fldname);
 	}
 }

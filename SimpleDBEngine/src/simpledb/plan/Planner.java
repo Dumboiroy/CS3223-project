@@ -1,7 +1,10 @@
 package simpledb.plan;
 
+import java.util.List;
 import simpledb.tx.Transaction;
 import simpledb.parse.*;
+import simpledb.metadata.MetadataMgr;
+import simpledb.materialize.SetOperationPlan;
 
 /**
  * The object that executes SQL statements.
@@ -10,10 +13,16 @@ import simpledb.parse.*;
 public class Planner {
    private QueryPlanner qplanner;
    private UpdatePlanner uplanner;
-   
+   private MetadataMgr mdm;   // when set, queries and updates are validated
+
    public Planner(QueryPlanner qplanner, UpdatePlanner uplanner) {
+      this(qplanner, uplanner, null);
+   }
+
+   public Planner(QueryPlanner qplanner, UpdatePlanner uplanner, MetadataMgr mdm) {
       this.qplanner = qplanner;
       this.uplanner = uplanner;
+      this.mdm = mdm;
    }
    
    /**
@@ -24,9 +33,20 @@ public class Planner {
     */
    public Plan createQueryPlan(String qry, Transaction tx) {
       Parser parser = new Parser(qry);
-      QueryData data = parser.query();
-      verifyQuery(data);
-      return qplanner.createPlan(data, tx);
+      SetQueryData setdata = parser.setQuery();
+
+      List<QueryData> queries = setdata.queries();
+      verifyQuery(queries.get(0), tx);
+      Plan p = qplanner.createPlan(queries.get(0), tx);
+
+      // fold in each set operation left to right
+      List<String> ops = setdata.operators();
+      for (int i = 0; i < ops.size(); i++) {
+         verifyQuery(queries.get(i + 1), tx);
+         Plan right = qplanner.createPlan(queries.get(i + 1), tx);
+         p = new SetOperationPlan(tx, p, right, ops.get(i));
+      }
+      return p;
    }
    
    /**
@@ -42,7 +62,7 @@ public class Planner {
    public int executeUpdate(String cmd, Transaction tx) {
       Parser parser = new Parser(cmd);
       Object data = parser.updateCmd();
-      verifyUpdate(data);
+      verifyUpdate(data, tx);
       if (data instanceof InsertData)
          return uplanner.executeInsert((InsertData)data, tx);
       else if (data instanceof DeleteData)
@@ -59,11 +79,13 @@ public class Planner {
          return 0;
    }
  
-   // SimpleDB does not verify queries, although it should.
-   private void verifyQuery(QueryData data) {
+   private void verifyQuery(QueryData data, Transaction tx) {
+      if (mdm != null)
+         new QueryValidator(mdm, tx).validateQuery(data);
    }
 
-   // SimpleDB does not verify updates, although it should.
-   private void verifyUpdate(Object data) {
+   private void verifyUpdate(Object data, Transaction tx) {
+      if (mdm != null)
+         new QueryValidator(mdm, tx).validateUpdate(data);
    }
 }

@@ -64,7 +64,14 @@ public class Layout {
     * @return the offset of that field within a record
     */
    public int offset(String fldname) {
-      return offsets.get(fldname);
+      Integer off = offsets.get(fldname);
+      if (off == null) {
+         // resolve qualified/bare references against the schema's actual fields
+         String resolved = schema.resolve(fldname);
+         if (resolved != null)
+            off = offsets.get(resolved);
+      }
+      return off;
    }
 
    /**

@@ -13,7 +13,8 @@ public class TablePlan implements Plan {
    private Transaction tx;
    private Layout layout;
    private StatInfo si;
-   
+   private Schema qualifiedSchema;
+
    /**
     * Creates a leaf node in the query tree corresponding
     * to the specified table.
@@ -25,6 +26,12 @@ public class TablePlan implements Plan {
       this.tx = tx;
       layout = md.getLayout(tblname, tx);
       si = md.getStatInfo(tblname, layout, tx);
+      // Query-visible schema qualifies each field as "tbl.fld" so that columns
+      // with the same name in different tables stay distinct in joins.
+      qualifiedSchema = new Schema();
+      Schema base = layout.schema();
+      for (String f : base.fields())
+         qualifiedSchema.add(tblname + "." + f, base);
    }
    
    /**
@@ -59,7 +66,9 @@ public class TablePlan implements Plan {
     * @see simpledb.plan.Plan#distinctValues(java.lang.String)
     */
    public int distinctValues(String fldname) {
-      return si.distinctValues(fldname);
+      // statistics are keyed by bare field names
+      int dot = fldname.indexOf('.');
+      return si.distinctValues(dot >= 0 ? fldname.substring(dot + 1) : fldname);
    }
    
    /**
@@ -68,7 +77,7 @@ public class TablePlan implements Plan {
     * @see simpledb.plan.Plan#schema()
     */
    public Schema schema() {
-      return layout.schema();
+      return qualifiedSchema;
    }
 
    /**
